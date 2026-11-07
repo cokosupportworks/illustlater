@@ -1,0 +1,9 @@
+{
+  "name": "Illust...later",
+  "short_name": "Illust...later",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "orientation": "landscape",
+  "background_color": "#303030",
+  "theme_color": "#303030"
+}
