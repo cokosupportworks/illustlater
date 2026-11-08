@@ -1,9 +1,30 @@
-<!doctype html>
-<html lang="ja"><head>
+<!--
+===============================================================================
+  Illust...later — Architecture Summary for Codex / AI Agents
+===============================================================================
+  * 詳細は同階層の `AGENTS.md` を参照してください。
+  * 単一ファイル構成。生成済みCSS・ImageTracerJS・Lucide・Paper.js・フォント・PDF/ICCエンジンを内蔵。
+  * 文字アウトライン化は内蔵Fontkit、互換処理用OpenType.jsを使用。
+  * 曲線演算はPaper.js、近似・線輪郭の処理はClipperを内蔵して使用。
+  * キャンバス基準座標系: 800 x 600 (getSVGPoint でスクリーン座標から正規化)
+  * 主要データ・レイヤー不変条件:
+    1. 下絵の元画像は `originalUnderlayCanvas` に保持し、Undo時にも消去しない。
+    2. 書き出し対象ベクター要素はすべて `#main-group` 直下に配置する。
+    3. 部分消しゴムのマスク `<rect>` はトリミング時の見切れを防ぐため広域座標を維持する。
+    4. 自動トレース時は透明余白 (alpha < 40) を必ず白 (255,255,255) に埋めてから解析する。
+    5. 均一太さ補正 (`applyUniformStrokeWidth`) は塗りパスを Zhang-Suen 細線化で中心線化する。
+    6. ノード編集 (`node`) で頂点を選択中はその頂点だけを表示し、方向線は選択頂点と隣接頂点に表示する。
+===============================================================================
+-->
+<!DOCTYPE html>
+<html lang="ja">
+<head>
   <meta charset="UTF-8"><meta name="studio-build" content="2026-11-08-v29">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="./apple-touch-icon.png">
+  <link rel="icon" href="apple-touch-icon.png">
   <title>Illust...later</title>
   <!-- Tailwind CSS -->
   <script id="studio-paper-engine">/*!
@@ -2341,7 +2362,7 @@ body {
 #perspective-cube .perspective-cube-main{display:grid;justify-items:center;gap:3px}
 #perspective-grid-settings{width:100%}
 #perspective-settings label[hidden]{display:none}#perspective-settings select{min-width:54%;background:#292929;border:1px solid #777}</style>
-<link rel="apple-touch-icon" href="./apple-touch-icon.png"><link rel="icon" href="apple-touch-icon.png"></head>
+</head>
 <body class="bg-slate-900 text-slate-100 h-screen w-screen overflow-hidden flex flex-col">
 
 
@@ -2350,26 +2371,26 @@ body {
     <span>横向きにすると編集画面が表示されます。</span>
   </section>
   <dialog id="perspective-settings" class="studio-command-dialog">
-    <form method="dialog" novalidate="">
+    <form method="dialog" novalidate>
       <h2 data-help="設定を変更すると遠近グリッドにすぐ反映されます。キャンセルで開く前の状態に戻ります。">遠近グリッドを定義</h2>
       <label>視点のプリセット<select name="preset" data-help="目線、俯瞰、あおりの設定をまとめて呼び出します。"><option value="">カスタム</option><option value="eye">目線（2点）</option><option value="above">上から見下ろす（3点）</option><option value="below">下から見上げる（3点）</option></select></label>
       <label>種類<select name="mode" data-help="消失点を1つ、2つ、または3つ使う投影を選びます。"><option value="1">一点遠近</option><option value="2">二点遠近</option><option value="3">三点遠近</option></select></label>
-      <label data-modes="23">視角 °<input type="number" name="angle" min="5" max="85" step="any" required="" data-help="左右の消失点の距離の比を変え、見える面の割合を調整します。消失点が設定範囲に達すると視距離を一時的に調整します。視角を戻すと、範囲内で元の視距離に戻ります。"></label>
-      <label data-modes="23">視距離 px<input type="number" name="distance" min="0.01" step="any" required="" data-help="視点とシーンとの距離です。大きいほど左右の消失点が離れます。数値欄とスライダーの範囲は視角とアートボード幅に応じて変わります。"></label>
-      <label>消失点・左 X px<input type="number" name="left" step="any" required="" data-help="一点遠近の消失点、または二点・三点遠近の左の消失点の横位置です。"></label>
-      <label data-modes="23">消失点・右 X px<input type="number" name="right" step="any" required="" data-help="地平線上の右の消失点の横位置です。"></label>
-      <label data-modes="3">第3消失点 X px<input type="number" name="thirdX" step="any" required="" data-help="上下方向の線が集まる第3消失点の横位置です。"></label>
-      <label data-modes="3">第3消失点 Y px<input type="number" name="thirdY" step="any" required="" data-help="上下方向の線が集まる第3消失点の縦位置です。"></label>
-      <label>地平線 Y px<input type="number" name="horizon" step="any" required="" data-help="地平線の縦位置です。左右の消失点も一緒に上下します。"></label>
-      <label>原点 X px<input type="number" name="originX" step="any" required="" data-help="グリッドの各面が出会う基準点の横位置です。"></label>
-      <label>地面 Y px<input type="number" name="ground" step="any" required="" data-help="グリッドの各面が出会う地面の縦位置です。"></label>
-      <label>目盛りの分割数<input type="number" name="divisions" min="2" max="40" step="1" required="" data-help="面の各方向を何分割するか指定します。分割数を増やすとグリッド間隔が狭まります。"></label>
-      <label>グリッド範囲 %<input type="number" name="extent" min="20" max="300" step="any" required="" data-help="各面の補助線を表示する範囲です。大きくすると消失点に近い位置まで表示します。"></label>
+      <label data-modes="23">視角 °<input type="number" name="angle" min="5" max="85" step="any" required data-help="左右の消失点の距離の比を変え、見える面の割合を調整します。消失点が設定範囲に達すると視距離を一時的に調整します。視角を戻すと、範囲内で元の視距離に戻ります。"></label>
+      <label data-modes="23">視距離 px<input type="number" name="distance" min="0.01" step="any" required data-help="視点とシーンとの距離です。大きいほど左右の消失点が離れます。数値欄とスライダーの範囲は視角とアートボード幅に応じて変わります。"></label>
+      <label>消失点・左 X px<input type="number" name="left" step="any" required data-help="一点遠近の消失点、または二点・三点遠近の左の消失点の横位置です。"></label>
+      <label data-modes="23">消失点・右 X px<input type="number" name="right" step="any" required data-help="地平線上の右の消失点の横位置です。"></label>
+      <label data-modes="3">第3消失点 X px<input type="number" name="thirdX" step="any" required data-help="上下方向の線が集まる第3消失点の横位置です。"></label>
+      <label data-modes="3">第3消失点 Y px<input type="number" name="thirdY" step="any" required data-help="上下方向の線が集まる第3消失点の縦位置です。"></label>
+      <label>地平線 Y px<input type="number" name="horizon" step="any" required data-help="地平線の縦位置です。左右の消失点も一緒に上下します。"></label>
+      <label>原点 X px<input type="number" name="originX" step="any" required data-help="グリッドの各面が出会う基準点の横位置です。"></label>
+      <label>地面 Y px<input type="number" name="ground" step="any" required data-help="グリッドの各面が出会う地面の縦位置です。"></label>
+      <label>目盛りの分割数<input type="number" name="divisions" min="2" max="40" step="1" required data-help="面の各方向を何分割するか指定します。分割数を増やすとグリッド間隔が狭まります。"></label>
+      <label>グリッド範囲 %<input type="number" name="extent" min="20" max="300" step="any" required data-help="各面の補助線を表示する範囲です。大きくすると消失点に近い位置まで表示します。"></label>
       <label>左面の色<input type="color" name="leftColor" data-help="左の面の補助線に使う色です。"></label>
       <label>右面の色<input type="color" name="rightColor" data-help="右の面の補助線に使う色です。"></label>
       <label>水平面の色<input type="color" name="groundColor" data-help="水平面の補助線に使う色です。"></label>
-      <label>不透明度 %<input type="number" name="opacity" min="5" max="100" step="any" required="" data-help="現在選んでいる面のグリッドの濃さです。他の面は薄く表示します。"></label>
-      <div class="object-actions"><button type="submit" value="cancel" formnovalidate="" data-help="グリッドを開く前の状態に戻します。">キャンセル</button><button type="submit" data-help="プレビュー中の遠近グリッドの設定を確定します。">適用</button></div>
+      <label>不透明度 %<input type="number" name="opacity" min="5" max="100" step="any" required data-help="現在選んでいる面のグリッドの濃さです。他の面は薄く表示します。"></label>
+      <div class="object-actions"><button type="submit" value="cancel" formnovalidate data-help="グリッドを開く前の状態に戻します。">キャンセル</button><button type="submit" data-help="プレビュー中の遠近グリッドの設定を確定します。">適用</button></div>
     </form>
   </dialog>
   <dialog id="touch-key-settings" class="studio-command-dialog">
@@ -2437,18 +2458,18 @@ body {
   </div>
   <div class="editor-layout">
     <nav class="tool-rail" aria-label="描画ツール">
-      <div class="tool-group"><button id="tool-select" class="tool-btn" type="button" onclick="setTool('select')" title="選択ツール (V)" aria-pressed="false"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 1.5v11l3-3 2.5 5 1.8-.9-2.4-4.8 4.1-.2Z" fill="currentColor" stroke="currentColor" stroke-linejoin="round"></path></svg></button>
-<button id="tool-node" class="tool-btn" type="button" onclick="setTool('node')" title="ダイレクト選択ツール (A)" aria-pressed="false"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 1.5v11l3-3 2.5 5 1.8-.9-2.4-4.8 4.1-.2Z" fill="none" stroke="currentColor" stroke-linejoin="round"></path></svg></button></div><div class="tool-group"><button id="tool-bezier" class="tool-btn" type="button" onclick="setTool('bezier')" title="ペンツール (P)" aria-pressed="false"><i data-lucide="pen-tool" class="w-4 h-4"></i></button>
+      <div class="tool-group"><button id="tool-select" class="tool-btn" type="button" onclick="setTool('select')" title="選択ツール (V)" aria-pressed="false"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 1.5v11l3-3 2.5 5 1.8-.9-2.4-4.8 4.1-.2Z" fill="currentColor" stroke="currentColor" stroke-linejoin="round"/></svg></button>
+<button id="tool-node" class="tool-btn" type="button" onclick="setTool('node')" title="ダイレクト選択ツール (A)" aria-pressed="false"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 1.5v11l3-3 2.5 5 1.8-.9-2.4-4.8 4.1-.2Z" fill="none" stroke="currentColor" stroke-linejoin="round"/></svg></button></div><div class="tool-group"><button id="tool-bezier" class="tool-btn" type="button" onclick="setTool('bezier')" title="ペンツール (P)" aria-pressed="false"><i data-lucide="pen-tool" class="w-4 h-4"></i></button>
 <button id="tool-pen" class="tool-btn" type="button" onclick="setTool('pen')" title="フリーハンドペン" aria-pressed="true"><i data-lucide="pencil" class="w-4 h-4"></i></button>
 <button id="tool-fillpen" class="tool-btn" type="button" onclick="setTool('fillpen')" title="閉じて塗る (輪郭を描くと自動で中を塗ります)" aria-pressed="false"><i data-lucide="lasso" class="w-4 h-4"></i></button></div><div class="tool-group"><button id="tool-rect" class="tool-btn" type="button" onclick="setTool('rect')" title="長方形・多角形・星形 (M)" aria-pressed="false"><i data-lucide="square" class="w-4 h-4"></i></button>
 <button id="tool-circle" class="tool-btn" type="button" onclick="setTool('circle')" title="楕円 (L)" aria-pressed="false"><i data-lucide="circle" class="w-4 h-4"></i></button>
-<button id="tool-line" class="tool-btn" type="button" onclick="setTool('line')" title="直線" aria-pressed="false"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M2 14 14 2" stroke="currentColor" stroke-width="1.4"></path></svg></button></div><div class="tool-group"><button id="tool-eyedropper" class="tool-btn" type="button" onclick="setTool('eyedropper')" title="スポイト（図形の外観・下絵の色）" aria-pressed="false"><i data-lucide="pipette" class="w-4 h-4"></i></button>
+<button id="tool-line" class="tool-btn" type="button" onclick="setTool('line')" title="直線" aria-pressed="false"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M2 14 14 2" stroke="currentColor" stroke-width="1.4"/></svg></button></div><div class="tool-group"><button id="tool-eyedropper" class="tool-btn" type="button" onclick="setTool('eyedropper')" title="スポイト（図形の外観・下絵の色）" aria-pressed="false"><i data-lucide="pipette" class="w-4 h-4"></i></button>
 <button id="tool-recolor" class="tool-btn" type="button" onclick="setTool('recolor')" title="要素の色を変更" aria-pressed="false"><i data-lucide="palette" class="w-4 h-4"></i></button>
-<button id="tool-rotate" class="tool-btn" type="button" onclick="setTool('rotate')" title="回転ツール (R)" aria-pressed="false" data-help="タップで基準点を決め、その周りをドラッグして回します。Shiftで15°刻みになります。"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M4 4a5.5 5.5 0 1 1-1 6 M4 1v4H0" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"></path></svg></button>
-<button id="tool-reflect" class="tool-btn" type="button" onclick="setTool('reflect')" title="リフレクトツール (O)" aria-pressed="false" data-help="キャンバスを2点タップするか、反転軸に沿ってドラッグします。移動角を表示し、Shiftを押すと元の位置から90°刻みに揃います。"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M8 1v14 M6 4 2 12h4Z M10 4l4 8h-4Z" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"></path></svg></button>
-<button id="tool-shear" class="tool-btn" type="button" onclick="setTool('shear')" title="シアーツール" aria-pressed="false" data-help="タップで基準点を決め、上部で選んだ方向へドラッグして傾けます。"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M2 12 6 4h8l-4 8Z M2 14h12" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"></path></svg></button>
-<button id="tool-puppet" class="tool-btn" type="button" onclick="startPuppetEditor()" title="パペットワープツール" aria-pressed="false" data-help="単色図形を1つ選び、ピンを2つ以上置きます。別のピンをドラッグしても残したピンの位置は固定されます。「編集完了」でピンを保持し、「展開」で通常のパスに確定します。"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 4 8 12 13 4 M3 2a2 2 0 1 0 0 4 2 2 0 1 0 0-4 M13 2a2 2 0 1 0 0 4 2 2 0 1 0 0-4 M8 10a2 2 0 1 0 0 4 2 2 0 1 0 0-4" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"></path></svg></button>
-<button id="tool-gradient-edit" class="tool-btn" type="button" onclick="openDockPanel('gradient');startGradientEditing()" title="グラデーション編集 (G)" aria-pressed="false" data-help="選択した図形のグラデーションをキャンバス上で編集します。丸を指・ペン・マウスでドラッグし、フリーカラーでは空白をタップして色点を追加できます。"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 12L13 3" fill="none" stroke="currentColor"></path><circle cx="3" cy="12" r="2" fill="none" stroke="currentColor"></circle><circle cx="13" cy="3" r="2" fill="currentColor"></circle></svg></button><button id="tool-mesh" class="tool-btn" type="button" onclick="startMeshEditor()" title="メッシュツール" aria-pressed="false"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M1 1h14v14H1zM1 8h14M8 1v14" fill="none" stroke="currentColor"></path></svg></button><button id="tool-warp" class="tool-btn" type="button" onclick="startWarpEditor()" title="自由変形・ワープツール" aria-pressed="false"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M2 3L13 1L15 13L1 15Z" fill="none" stroke="currentColor"></path><path d="M4 7L11 6M4 10L12 9" stroke="currentColor"></path></svg></button><button id="tool-width" class="tool-btn" type="button" onclick="startWidthEditor()" title="線幅ツール" aria-pressed="false"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M1 8Q8 1 15 8Q8 15 1 8Z" fill="none" stroke="currentColor"></path><path d="M8 2v12" stroke="currentColor"></path></svg></button><button id="tool-shape-builder" class="tool-btn" type="button" onclick="startShapeBuilder()" title="シェイプ形成ツール" aria-pressed="false"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M1 3h9v9H1z M6 1h9v9H6z" fill="none" stroke="currentColor"></path><path d="M6 3h4v7H6z" fill="currentColor" opacity=".5"></path></svg></button>
+<button id="tool-rotate" class="tool-btn" type="button" onclick="setTool('rotate')" title="回転ツール (R)" aria-pressed="false" data-help="タップで基準点を決め、その周りをドラッグして回します。Shiftで15°刻みになります。"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M4 4a5.5 5.5 0 1 1-1 6 M4 1v4H0" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+<button id="tool-reflect" class="tool-btn" type="button" onclick="setTool('reflect')" title="リフレクトツール (O)" aria-pressed="false" data-help="反転の折り目を指定します。2点をタップすると、その2点を結ぶ線で鏡写しにします。ドラッグでは始点と終点を結びます。先に基準点を置いた場合は、その点と指先やポインターを結びます。Shiftで90°刻みに揃います。ドラッグの始点へ戻すと元の形と位置に戻ります。"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M8 1v14 M6 4 2 12h4Z M10 4l4 8h-4Z" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+<button id="tool-shear" class="tool-btn" type="button" onclick="setTool('shear')" title="シアーツール" aria-pressed="false" data-help="タップで基準点を決め、上部で選んだ方向へドラッグして傾けます。"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M2 12 6 4h8l-4 8Z M2 14h12" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+<button id="tool-puppet" class="tool-btn" type="button" onclick="startPuppetEditor()" title="パペットワープツール" aria-pressed="false" data-help="単色図形を1つ選び、ピンを2つ以上置きます。別のピンをドラッグしても残したピンの位置は固定されます。「編集完了」でピンを保持し、「展開」で通常のパスに確定します。"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 4 8 12 13 4 M3 2a2 2 0 1 0 0 4 2 2 0 1 0 0-4 M13 2a2 2 0 1 0 0 4 2 2 0 1 0 0-4 M8 10a2 2 0 1 0 0 4 2 2 0 1 0 0-4" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+<button id="tool-gradient-edit" class="tool-btn" type="button" onclick="openDockPanel('gradient');startGradientEditing()" title="グラデーション編集 (G)" aria-pressed="false" data-help="選択した図形のグラデーションをキャンバス上で編集します。丸を指・ペン・マウスでドラッグし、フリーカラーでは空白をタップして色点を追加できます。"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 12L13 3" fill="none" stroke="currentColor"/><circle cx="3" cy="12" r="2" fill="none" stroke="currentColor"/><circle cx="13" cy="3" r="2" fill="currentColor"/></svg></button><button id="tool-mesh" class="tool-btn" type="button" onclick="startMeshEditor()" title="メッシュツール" aria-pressed="false"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M1 1h14v14H1zM1 8h14M8 1v14" fill="none" stroke="currentColor"/></svg></button><button id="tool-warp" class="tool-btn" type="button" onclick="startWarpEditor()" title="自由変形・ワープツール" aria-pressed="false"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M2 3L13 1L15 13L1 15Z" fill="none" stroke="currentColor"/><path d="M4 7L11 6M4 10L12 9" stroke="currentColor"/></svg></button><button id="tool-width" class="tool-btn" type="button" onclick="startWidthEditor()" title="線幅ツール" aria-pressed="false"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M1 8Q8 1 15 8Q8 15 1 8Z" fill="none" stroke="currentColor"/><path d="M8 2v12" stroke="currentColor"/></svg></button><button id="tool-shape-builder" class="tool-btn" type="button" onclick="startShapeBuilder()" title="シェイプ形成ツール" aria-pressed="false"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M1 3h9v9H1z M6 1h9v9H6z" fill="none" stroke="currentColor"/><path d="M6 3h4v7H6z" fill="currentColor" opacity=".5"/></svg></button>
 <button id="tool-bucket" class="tool-btn" type="button" onclick="setTool('bucket')" title="バケツ塗りつぶし (閉じた領域をクリックして塗る)" aria-pressed="false"><i data-lucide="paint-bucket" class="w-4 h-4"></i></button></div><div class="tool-group"><button id="tool-eraser-partial" class="tool-btn" type="button" onclick="setTool('eraser-partial')" title="部分消しゴム (なぞった部分を消去)" aria-pressed="false"><i data-lucide="eraser" class="w-4 h-4"></i></button>
 <button id="tool-eraser" class="tool-btn" type="button" onclick="setTool('eraser')" title="パス単位で消去" aria-pressed="false"><i data-lucide="trash" class="w-4 h-4"></i></button>
 <button id="tool-crop" class="tool-btn" type="button" onclick="setTool('crop')" title="手動トリミング枠の調整 (Word風ハンドル操作)" aria-pressed="false"><i data-lucide="crop" class="w-4 h-4"></i></button></div>
@@ -2470,23 +2491,23 @@ body {
           <button type="button" onclick="openDockPanel('fonts')">フォント…</button><button type="button" onclick="openDockPanel('typography')">文字・段落…</button>
           <button type="button" id="text-outline" onclick="outlineSelectedText()">アウトラインを作成</button>
           <label>組み方 <select id="text-layout-mode"><option value="point">横書き</option><option value="vertical">縦書き</option><option value="area">エリア内文字</option><option value="path">パス上文字</option></select></label>
-          <label class="hidden">枠幅 <input id="text-area-width" type="number" value="240" min="1" max="10000" step="any" required=""></label>
-          <label class="hidden">枠高さ <input id="text-area-height" type="number" value="160" min="1" max="10000" step="any" required=""></label>
-          <label class="hidden">開始 % <input id="text-path-offset" type="number" value="0" min="-100" max="200" step="any" required=""></label>
-          <label class="hidden">終端 %<input id="text-path-end" type="number" min="0.1" max="100" value="100" step="any" required=""></label><label class="hidden">側<select id="text-path-side"><option value="above">上側</option><option value="below">下側</option></select></label><label class="hidden">基準<select id="text-path-baseline"><option value="auto">ベースライン</option><option value="hanging">アセンダー</option><option value="middle">中央</option><option value="text-after-edge">ディセンダー</option></select></label><label class="hidden">位置調整<input id="text-path-shift" type="number" min="-5000" max="5000" value="0" step="any" required=""></label><button class="hidden" id="text-path-reverse" type="button" onclick="reverseTypePath()">パスの向きを反転</button><button class="hidden" id="text-path-edit" type="button" onclick="editSelectedTypePath()">パスを編集</button>
+          <label class="hidden">枠幅 <input id="text-area-width" type="number" value="240" min="1" max="10000" step="any" required></label>
+          <label class="hidden">枠高さ <input id="text-area-height" type="number" value="160" min="1" max="10000" step="any" required></label>
+          <label class="hidden">開始 % <input id="text-path-offset" type="number" value="0" min="-100" max="200" step="any" required></label>
+          <label class="hidden">終端 %<input id="text-path-end" type="number" min="0.1" max="100" value="100" step="any" required></label><label class="hidden">側<select id="text-path-side"><option value="above">上側</option><option value="below">下側</option></select></label><label class="hidden">基準<select id="text-path-baseline"><option value="auto">ベースライン</option><option value="hanging">アセンダー</option><option value="middle">中央</option><option value="text-after-edge">ディセンダー</option></select></label><label class="hidden">位置調整<input id="text-path-shift" type="number" min="-5000" max="5000" value="0" step="any" required></label><button class="hidden" id="text-path-reverse" type="button" onclick="reverseTypePath()">パスの向きを反転</button><button class="hidden" id="text-path-edit" type="button" onclick="editSelectedTypePath()">パスを編集</button>
           
-          <label>サイズ <input id="text-size" type="number" value="32" min="4" max="2000" step="any" required=""></label>
+          <label>サイズ <input id="text-size" type="number" value="32" min="4" max="2000" step="any" required></label>
           <label>色 <span id="text-paint-preview" class="paint-swatch"><input id="text-color" type="color" value="#000000"></span></label>
-          <label>行間 % <input id="text-leading" type="number" value="120" min="1" max="1000" step="any" required=""></label>
-          <label>字間 px <input id="text-tracking" type="number" value="0" step="any" required=""></label>
+          <label>行間 % <input id="text-leading" type="number" value="120" min="1" max="1000" step="any" required></label>
+          <label>字間 px <input id="text-tracking" type="number" value="0" step="any" required></label>
           <label>揃え <select id="text-align">
             <option value="start">左</option><option value="middle">中央</option><option value="end">右</option>
           </select></label>
           <label><input id="text-bold" type="checkbox"> 太字</label>
           <label><input id="text-italic" type="checkbox"> 斜体</label>
-          <span id="text-overflow" hidden="" aria-hidden="true" role="status">文字が枠からあふれています</span>
-          <button id="text-commit" type="button" onclick="finishTextEditing(true)" disabled="">確定</button>
-          <button id="text-cancel" type="button" onclick="finishTextEditing(false)" disabled="">取消</button>
+          <span id="text-overflow" hidden aria-hidden="true" role="status">文字が枠からあふれています</span>
+          <button id="text-commit" type="button" onclick="finishTextEditing(true)" disabled>確定</button>
+          <button id="text-cancel" type="button" onclick="finishTextEditing(false)" disabled>取消</button>
         </div>
         <div id="interactive-transform-options" class="hidden">
           <span id="interactive-transform-hint"></span>
@@ -2496,7 +2517,7 @@ body {
           <button id="puppet-expand" type="button" onclick="expandPuppet()" data-help="今の形を通常のパスとして確定し、ピンの編集を終了します。">展開</button>
           <button type="button" onclick="setTool('select')" data-help="編集を終えて選択ツールに戻ります。パペットワープのピンは保存されます。">編集完了</button>
         </div>
-        <div id="mesh-options" class="hidden items-center gap-2"><span id="mesh-node-index"></span><label>色<input id="mesh-node-color" type="color" onchange="updateMeshNode()"></label><label>X %<input id="mesh-node-x" type="number" min="0" max="100" step="any" required="" onchange="updateMeshNode()"></label><label>Y %<input id="mesh-node-y" type="number" min="0" max="100" step="any" required="" onchange="updateMeshNode()"></label><button type="button" onclick="cancelMeshDrag()">操作取消</button><button type="button" onclick="setTool('select')">完了</button></div><div id="warp-options" class="hidden items-center gap-2" role="group" aria-label="自由変形の設定"><label>変形 <select id="warp-kind" onchange="applyWarpControls()"><option value="perspective">遠近変形</option><option value="envelope">エンベロープ</option><option value="arch">アーチ</option><option value="bulge">膨張</option><option value="wave">波形</option></select></label><label>強さ % <input id="warp-amount" type="number" min="-100" max="100" value="0" step="any" required="" onchange="applyWarpControls()"></label><button type="button" onclick="applyWarpControls(true)">変形をリセット</button><button type="button" onclick="applyWarpControls(false,true)">分割・拡張</button><button type="button" onclick="cancelWarpDrag()">操作取消</button><button type="button" onclick="setTool('select')">完了</button></div><div id="width-editor-options" class="hidden items-center gap-2" role="group" aria-label="幅点の設定"><label>位置 % <input id="width-point-position" type="number" min="0" max="100" step="any" value="0" required=""></label><label>左幅 <input id="width-point-left" type="number" min="0" max="5000" step="any" value="1" required=""></label><label>右幅 <input id="width-point-right" type="number" min="0" max="5000" step="any" value="1" required=""></label><label><input id="width-point-symmetric" type="checkbox" checked="">左右対称</label><button type="button" onclick="updateWidthPoint()">適用</button><button id="width-point-remove" type="button" onclick="updateWidthPoint(true)">幅点を削除</button><button type="button" onclick="cancelWidthDrag()">操作取消</button><button type="button" onclick="setTool('select')">完了</button></div><div id="builder-options" class="hidden items-center gap-2" role="group" aria-label="シェイプ形成の設定"><label>操作 <select id="builder-mode"><option value="merge">結合</option><option value="erase">削除</option></select></label><span id="builder-status" role="status"></span><button type="button" onclick="cancelCanvasEdit()">操作取消</button><button type="button" onclick="setTool('select')">完了</button></div>
+        <div id="mesh-options" class="hidden items-center gap-2"><span id="mesh-node-index"></span><label>色<input id="mesh-node-color" type="color" onchange="updateMeshNode()"></label><label>X %<input id="mesh-node-x" type="number" min="0" max="100" step="any" required onchange="updateMeshNode()"></label><label>Y %<input id="mesh-node-y" type="number" min="0" max="100" step="any" required onchange="updateMeshNode()"></label><button type="button" onclick="cancelMeshDrag()">操作取消</button><button type="button" onclick="setTool('select')">完了</button></div><div id="warp-options" class="hidden items-center gap-2" role="group" aria-label="自由変形の設定"><label>変形 <select id="warp-kind" onchange="applyWarpControls()"><option value="perspective">遠近変形</option><option value="envelope">エンベロープ</option><option value="arch">アーチ</option><option value="bulge">膨張</option><option value="wave">波形</option></select></label><label>強さ % <input id="warp-amount" type="number" min="-100" max="100" value="0" step="any" required onchange="applyWarpControls()"></label><button type="button" onclick="applyWarpControls(true)">変形をリセット</button><button type="button" onclick="applyWarpControls(false,true)">分割・拡張</button><button type="button" onclick="cancelWarpDrag()">操作取消</button><button type="button" onclick="setTool('select')">完了</button></div><div id="width-editor-options" class="hidden items-center gap-2" role="group" aria-label="幅点の設定"><label>位置 % <input id="width-point-position" type="number" min="0" max="100" step="any" value="0" required></label><label>左幅 <input id="width-point-left" type="number" min="0" max="5000" step="any" value="1" required></label><label>右幅 <input id="width-point-right" type="number" min="0" max="5000" step="any" value="1" required></label><label><input id="width-point-symmetric" type="checkbox" checked>左右対称</label><button type="button" onclick="updateWidthPoint()">適用</button><button id="width-point-remove" type="button" onclick="updateWidthPoint(true)">幅点を削除</button><button type="button" onclick="cancelWidthDrag()">操作取消</button><button type="button" onclick="setTool('select')">完了</button></div><div id="builder-options" class="hidden items-center gap-2" role="group" aria-label="シェイプ形成の設定"><label>操作 <select id="builder-mode"><option value="merge">結合</option><option value="erase">削除</option></select></label><span id="builder-status" role="status"></span><button type="button" onclick="cancelCanvasEdit()">操作取消</button><button type="button" onclick="setTool('select')">完了</button></div>
         <div id="eyedropper-options" class="hidden items-center gap-2">
           <label class="flex items-center gap-2">スポイト
             <select id="eyedropper-mode">
@@ -2533,7 +2554,8 @@ body {
           <span id="bezier-bar-title" class="font-semibold text-indigo-300">ベジェ曲線ペン:</span>
           <span id="bezier-bar-hint" class="text-slate-300 text-[11px]">クリックで頂点追加・ドラッグで曲線ハンドル引き出し</span>
           
-          <button id="btn-insert-node" type="button" class="hidden px-2 py-1" aria-pressed="false" title="オンにしてから線をタップすると頂点を追加" onclick="setNodeInsertionMode(this.getAttribute('aria-pressed') !== 'true')">頂点を追加</button>
+          <button id="btn-insert-node" type="button" class="hidden px-2 py-1" aria-pressed="false"
+            title="オンにしてから線をタップすると頂点を追加" onclick="setNodeInsertionMode(this.getAttribute('aria-pressed') !== 'true')">頂点を追加</button>
 
           <!-- 頂点選択時専用のIllustrator風コントロール群 -->
           <div id="node-point-actions" class="hidden items-center gap-1 border-l border-slate-700 pl-2">
@@ -2566,7 +2588,8 @@ body {
           </select>
         </label>
         <button id="open-shape-settings" type="button" class="hidden" onclick="openShapeSettings()">図形設定</button>
-        <button id="duplicate-on-drag" class="hidden" type="button" aria-pressed="false" onclick="setDuplicateDragMode(this.getAttribute('aria-pressed') !== 'true')">複製して移動</button>
+        <button id="duplicate-on-drag" class="hidden" type="button" aria-pressed="false"
+          onclick="setDuplicateDragMode(this.getAttribute('aria-pressed') !== 'true')">複製して移動</button>
         <label id="multiple-selection-option"><input id="multiple-selection" type="checkbox"> 複数選択</label>
         <label><input id="constrain-proportions" type="checkbox"> 縦横比を固定</label>
         <label><input id="transform-from-center" type="checkbox"> 中心を固定</label>
@@ -2576,9 +2599,9 @@ body {
         <div id="perspective-cube" class="hidden" role="group" aria-label="遠近グリッドの描画面">
           <div class="perspective-cube-main">
           <svg viewBox="0 0 56 56" aria-label="面を選択するキューブ">
-            <polygon points="28,7 10,17 10,37 28,27" fill="#518bff" role="button" tabindex="0" aria-label="左の面" data-perspective-plane="left" data-help="左の面を選び、青い遠近グリッドに沿って描きます。"></polygon>
-            <polygon points="28,7 46,17 46,37 28,27" fill="#ec9048" role="button" tabindex="0" aria-label="右の面" data-perspective-plane="right" data-help="右の面を選び、橙色の遠近グリッドに沿って描きます。"></polygon>
-            <polygon points="10,37 28,27 46,37 28,48" fill="#73af77" role="button" tabindex="0" aria-label="水平面" data-perspective-plane="ground" data-help="水平面を選び、緑の遠近グリッドに沿って描きます。"></polygon>
+            <polygon points="28,7 10,17 10,37 28,27" fill="#518bff" role="button" tabindex="0" aria-label="左の面" data-perspective-plane="left" data-help="左の面を選び、青い遠近グリッドに沿って描きます。"/>
+            <polygon points="28,7 46,17 46,37 28,27" fill="#ec9048" role="button" tabindex="0" aria-label="右の面" data-perspective-plane="right" data-help="右の面を選び、橙色の遠近グリッドに沿って描きます。"/>
+            <polygon points="10,37 28,27 46,37 28,48" fill="#73af77" role="button" tabindex="0" aria-label="水平面" data-perspective-plane="ground" data-help="水平面を選び、緑の遠近グリッドに沿って描きます。"/>
           </svg>
           <button id="perspective-grid-settings" type="button" onclick="openPerspectiveSettings()" aria-controls="perspective-settings" data-help="消失点、視角、視距離、目盛りを調整します。変更は即時表示され、適用で確定、キャンセルで元に戻ります。">設定</button>
           </div>
@@ -2647,17 +2670,18 @@ body {
           <!-- 複数選択＆拡大縮小バウンディングボックスオーバーレイ（書き出し時は除外） -->
           <g id="export-artboard-overlay" pointer-events="none"></g>
         <g id="selection-transform-group" class="hidden">
-            <rect id="alignment-key-outline" class="hidden" fill="none" stroke="#0566cf" stroke-width="3" vector-effect="non-scaling-stroke" pointer-events="none"></rect>
+            <rect id="alignment-key-outline" class="hidden" fill="none" stroke="#0566cf" stroke-width="3"
+              vector-effect="non-scaling-stroke" pointer-events="none"></rect>
             <rect id="sel-bbox-rect" fill="transparent" stroke="#2979d8" stroke-width="1" style="cursor: move;"></rect>
             <g id="sel-handles-layer">
               <rect data-sel-handle="nw" class="sel-handle" width="12" height="12" fill="#ffffff" stroke="#1d69c1" stroke-width="2" rx="2" style="cursor: nwse-resize;"></rect>
-              <rect data-sel-handle="n" class="sel-handle" width="12" height="12" fill="#ffffff" stroke="#1d69c1" stroke-width="2" rx="2" style="cursor: ns-resize;"></rect>
+              <rect data-sel-handle="n"  class="sel-handle" width="12" height="12" fill="#ffffff" stroke="#1d69c1" stroke-width="2" rx="2" style="cursor: ns-resize;"></rect>
               <rect data-sel-handle="ne" class="sel-handle" width="12" height="12" fill="#ffffff" stroke="#1d69c1" stroke-width="2" rx="2" style="cursor: nesw-resize;"></rect>
-              <rect data-sel-handle="e" class="sel-handle" width="12" height="12" fill="#ffffff" stroke="#1d69c1" stroke-width="2" rx="2" style="cursor: ew-resize;"></rect>
+              <rect data-sel-handle="e"  class="sel-handle" width="12" height="12" fill="#ffffff" stroke="#1d69c1" stroke-width="2" rx="2" style="cursor: ew-resize;"></rect>
               <rect data-sel-handle="se" class="sel-handle" width="12" height="12" fill="#ffffff" stroke="#1d69c1" stroke-width="2" rx="2" style="cursor: nwse-resize;"></rect>
-              <rect data-sel-handle="s" class="sel-handle" width="12" height="12" fill="#ffffff" stroke="#1d69c1" stroke-width="2" rx="2" style="cursor: ns-resize;"></rect>
+              <rect data-sel-handle="s"  class="sel-handle" width="12" height="12" fill="#ffffff" stroke="#1d69c1" stroke-width="2" rx="2" style="cursor: ns-resize;"></rect>
               <rect data-sel-handle="sw" class="sel-handle" width="12" height="12" fill="#ffffff" stroke="#1d69c1" stroke-width="2" rx="2" style="cursor: nesw-resize;"></rect>
-              <rect data-sel-handle="w" class="sel-handle" width="12" height="12" fill="#ffffff" stroke="#1d69c1" stroke-width="2" rx="2" style="cursor: ew-resize;"></rect>
+              <rect data-sel-handle="w"  class="sel-handle" width="12" height="12" fill="#ffffff" stroke="#1d69c1" stroke-width="2" rx="2" style="cursor: ew-resize;"></rect>
             </g>
             <g id="selection-rotate-handle" aria-hidden="true">
               <line id="rotation-stem" stroke="#2979d8" vector-effect="non-scaling-stroke" pointer-events="none"></line>
@@ -2705,7 +2729,8 @@ body {
           </g>
         </svg>
 
-        <textarea id="text-content" class="hidden" wrap="off" maxlength="500" aria-label="キャンバス上の文字入力" spellcheck="false"></textarea>
+        <textarea id="text-content" class="hidden" wrap="off" maxlength="500"
+          aria-label="キャンバス上の文字入力" spellcheck="false"></textarea>
 
         <!-- 自動トレース処理中ローディングオーバーレイ -->
         <div id="loading-overlay" class="absolute inset-0 bg-slate-900/80 backdrop-blur-sm flex flex-col items-center justify-center gap-3 z-30 hidden">
@@ -2723,7 +2748,8 @@ body {
           <input type="checkbox" aria-label="透明部分の市松表示" onchange="document.getElementById('board-container').classList.toggle('bg-checkerboard', this.checked)">
           透明グリッド
         </label>
-        <button id="outline-view" type="button" aria-pressed="false" onclick="toggleOutlineView()" title="アウトラインと通常表示を切り替え">アウトライン</button>
+        <button id="outline-view" type="button" aria-pressed="false" onclick="toggleOutlineView()"
+          title="アウトラインと通常表示を切り替え">アウトライン</button>
         <button onclick="zoomCanvas(0.1)" class="p-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-700 transition" title="拡大">
           <i data-lucide="zoom-in" class="w-5 h-5"></i>
         </button>
@@ -2761,7 +2787,7 @@ body {
         <!-- 線の色 -->
         <div class="paint-channel flex items-center gap-1 bg-slate-800/90 px-2 py-0.5 rounded-lg border border-slate-700" title="線の色（選択中の図形にも即時反映）">
           <label class="flex items-center gap-1 cursor-pointer text-[11px] text-slate-300">
-            <input type="checkbox" id="stroke-enabled" checked="" onchange="onPaintChange('stroke')" class="accent-indigo-500 w-3 h-3 rounded">
+            <input type="checkbox" id="stroke-enabled" checked onchange="onPaintChange('stroke')" class="accent-indigo-500 w-3 h-3 rounded">
             <span>線</span>
           </label>
           <span class="paint-swatch"><input type="color" id="color-picker" value="#000000" oninput="onStrokeColorPick()" class="w-5 h-5 rounded cursor-pointer bg-transparent border-0 p-0" aria-label="線色"></span>
@@ -2780,7 +2806,7 @@ body {
         <div class="palette-target" role="group" aria-label="パレットの適用先">
           <span>パレット</span>
           <label><input type="radio" name="palette-target" value="fill"> 塗り</label>
-          <label><input type="radio" name="palette-target" value="stroke" checked=""> 線</label>
+          <label><input type="radio" name="palette-target" value="stroke" checked> 線</label>
         </div>
         <div class="swatches" role="group" aria-label="カラーパレット">
           <button type="button" class="swatch-none" title="なし" aria-label="なし（選択した線または塗りを外す）" onclick="setQuickColor('none')"></button>
@@ -2855,11 +2881,11 @@ body {
           </label>
           <label>X <input id="shape-create-x" type="number" step="any" value="300"></label>
           <label>Y <input id="shape-create-y" type="number" step="any" value="250"></label>
-          <label data-shape-box="">幅 <input id="shape-create-w" type="number" min="0.01" max="4096" step="any" value="200"></label>
-          <label data-shape-box="">高さ <input id="shape-create-h" type="number" min="0.01" max="4096" step="any" value="100"></label>
+          <label data-shape-box>幅 <input id="shape-create-w" type="number" min="0.01" max="4096" step="any" value="200"></label>
+          <label data-shape-box>高さ <input id="shape-create-h" type="number" min="0.01" max="4096" step="any" value="100"></label>
           <label class="hidden" data-shape-option="line">長さ <input id="shape-create-length" type="number" min="0.01" max="4096" step="any" value="150"></label>
           <label class="hidden" data-shape-option="line">角度° <input id="shape-create-angle" type="number" step="any" value="0"></label>
-          <label class="wide" data-shape-box="">基準
+          <label class="wide" data-shape-box>基準
             <select id="shape-create-anchor"><option value="corner">左上</option><option value="center">中心</option></select>
           </label>
           <div class="wide object-actions"><button type="button" onclick="createShapeFromFields()">図形を作成</button></div>
@@ -2869,11 +2895,11 @@ body {
         <summary>コピー・貼り付け</summary>
         <div class="panel-content object-actions">
           <button id="btn-copy-panel" type="button" onclick="copySelectedElements()">コピー</button>
-          <button data-paste-position="" type="button" onclick="pasteCopiedElements()">貼り付け</button>
+          <button data-paste-position type="button" onclick="pasteCopiedElements()">貼り付け</button>
           <button id="btn-cut-sel" type="button" onclick="cutSelectedElements()">切り取り</button>
-          <button data-paste-position="" type="button" onclick="pasteCopiedElements('place')">同じ位置</button>
-          <button data-paste-position="" type="button" onclick="pasteCopiedElements('front')">前面</button>
-          <button data-paste-position="" type="button" onclick="pasteCopiedElements('back')">背面</button>
+          <button data-paste-position type="button" onclick="pasteCopiedElements('place')">同じ位置</button>
+          <button data-paste-position type="button" onclick="pasteCopiedElements('front')">前面</button>
+          <button data-paste-position type="button" onclick="pasteCopiedElements('back')">背面</button>
         </div>
       </details>
       <details class="panel-section" id="same-selection-panel">
@@ -2896,59 +2922,59 @@ body {
             </select>
           </label>
           <div class="wide object-actions">
-            <button id="btn-select-same" type="button" onclick="selectSameObjects()" disabled="">選択</button>
+            <button id="btn-select-same" type="button" onclick="selectSameObjects()" disabled>選択</button>
           </div>
           <p id="same-selection-hint" class="wide">見本となる図形を1つ選んでください</p>
         </div>
       </details>
-      <details class="panel-section" id="print-panel"><summary>印刷・PDF</summary><div class="panel-content property-fields"><label class="wide"><input id="pdf-import-raster" data-help-label="未対応のPDFを画像として配置" data-help="図形として読み込めないPDFページを、見た目を保つ画像として配置します。そのページ内の文字やパスは編集できません。オフでは対応外のページがあると読込を取り消します。" type="checkbox" checked="">読込時、未対応のPDFページは画像として配置</label><p class="wide">画像配置したページ内の文字・パスは編集できません。</p><button class="wide" type="button" data-help="SVGの効果やPDFのページを、見た目を保つ画像として配置します。画像内の文字・パスは編集できません。PDFは1ページ目を配置し、画像は長辺2000px以内です。" onclick="document.getElementById('visual-artwork-file').click()">SVG・PDFを見た目のまま画像配置</button><input id="visual-artwork-file" type="file" accept=".svg,.pdf,.ai" hidden="" onchange="readVisualArtworkFile(this)"><label class="wide"><input id="live-proof-enabled" data-help-label="ICCプルーフを自動更新" data-help="現在のアートボードをICC変換した見本を編集後に自動更新します。作品の元の色は変更しません。" type="checkbox" onchange="toggleLiveProof()">ICCプルーフを編集後に自動更新</label><img id="live-proof-preview" class="wide" hidden="" alt="ICCプルーフ" style="max-width:100%;background:white"><p id="live-proof-status" class="wide" role="status"></p><label class="wide">保存方式<select id="print-flatten"><option value="vector">ベクトルを保持</option><option value="cmyk">CMYK画像に統合（白背景）</option></select></label><button class="wide" type="button" data-help="保存したPDFの識別情報・ICC出力条件・書体埋込・透明効果・ページ枠を検査します。PDF/Xの全規定への適合認証ではありません。" onclick="document.getElementById('pdf-inspection-file').click()">保存したPDFの構造を検査</button><input id="pdf-inspection-file" type="file" accept=".pdf,.ai" hidden="" onchange="inspectPrintPDFFile(this)"><button class="wide" type="button" data-help="実際の端末で確認する項目と、結果を保存する画面を開きます。未確認の項目は合格にしません。" title="端末の動作確認" onclick="openDeviceChecks()">端末の動作確認・結果の保存</button><button id="print-preflight" class="wide" type="button" onclick="showPrintPreflight()">出力前の確認</button><p id="print-preflight-result" class="wide" role="status"></p><label class="wide">ページ<select id="print-pages"><option value="active">選択中のアートボード</option><option value="all">全アートボード</option></select></label><label class="wide">色<select id="print-space"><option value="CMYK">CMYK（ICC変換）</option><option value="RGB">sRGB（ICC付き）</option></select></label><label class="wide">出力プロファイル<span id="print-profile-name"></span><input type="file" accept=".icc,.icm" onchange="loadOutputICC(this)"></label><label class="wide">変換方法<select id="print-intent"><option value="1">相対的な色域を維持・黒点補正</option><option value="0">知覚的</option><option value="3">絶対的な色域を維持</option></select></label><label>効果の解像度 dpi<input id="print-dpi" type="number" min="72" max="600" step="1" value="300" required=""></label><label>塗り足し mm<input id="print-bleed" type="number" min="0" max="20" step="any" value="3" required=""></label><label class="wide"><input id="print-marks" type="checkbox">トンボを付ける</label><button class="wide" type="button" onclick="showColorProof()">ICCソフトプルーフを表示</button><label class="wide"><input id="print-source" type="checkbox" checked="">編集用SVGをPDFに添付</label><button class="wide" type="button" onclick="downloadPrintPDF()">PDFを保存</button><button class="wide" type="button" onclick="downloadPrintPDF(true)">PDF互換AIを保存</button><p class="wide">通常の図形・線・取得済み書体はベクトルで保存。ぼかし・マスク・パターン・未取得書体は指定解像度で画像化します。AIはIllustratorで開けるPDF互換形式です。Adobe独自の編集データは含みません。</p><label>C %<input id="ink-c" type="number" min="0" max="100" step="any" value="0" required=""></label><label>M %<input id="ink-m" type="number" min="0" max="100" step="any" value="0" required=""></label><label>Y %<input id="ink-y" type="number" min="0" max="100" step="any" value="0" required=""></label><label>K %<input id="ink-k" type="number" min="0" max="100" step="any" value="100" required=""></label><button class="wide" type="button" onclick="applyCMYKPaint()">選択中の塗り・線にCMYK値を適用</button></div></details>
-<details class="panel-section" id="typography-panel"><summary>文字・段落</summary><div class="panel-content property-fields"><details class="wide"><summary>文字組みアキ量</summary><p>文字サイズに対する割合（%）。行に収まらない場合は最小値まで詰めます。</p><table><thead><tr><th>種類</th><th>最小</th><th>標準</th><th>最大</th></tr></thead><tbody><tr><th>開き約物の後</th><td><input id="aki-open-min" type="number" min="-100" max="200" step="1" value="0" style="width:56px" aria-label="開き約物の後 最小 %"></td><td><input id="aki-open-opt" type="number" min="-100" max="200" step="1" value="0" style="width:56px" aria-label="開き約物の後 標準 %"></td><td><input id="aki-open-max" type="number" min="-100" max="200" step="1" value="0" style="width:56px" aria-label="開き約物の後 最大 %"></td></tr><tr><th>閉じ約物の前</th><td><input id="aki-close-min" type="number" min="-100" max="200" step="1" value="0" style="width:56px" aria-label="閉じ約物の前 最小 %"></td><td><input id="aki-close-opt" type="number" min="-100" max="200" step="1" value="0" style="width:56px" aria-label="閉じ約物の前 標準 %"></td><td><input id="aki-close-max" type="number" min="-100" max="200" step="1" value="0" style="width:56px" aria-label="閉じ約物の前 最大 %"></td></tr><tr><th>中間約物</th><td><input id="aki-middle-min" type="number" min="-100" max="200" step="1" value="0" style="width:56px" aria-label="中間約物 最小 %"></td><td><input id="aki-middle-opt" type="number" min="-100" max="200" step="1" value="0" style="width:56px" aria-label="中間約物 標準 %"></td><td><input id="aki-middle-max" type="number" min="-100" max="200" step="1" value="0" style="width:56px" aria-label="中間約物 最大 %"></td></tr><tr><th>和欧文間</th><td><input id="aki-latin-min" type="number" min="-100" max="200" step="1" value="0" style="width:56px" aria-label="和欧文間 最小 %"></td><td><input id="aki-latin-opt" type="number" min="-100" max="200" step="1" value="0" style="width:56px" aria-label="和欧文間 標準 %"></td><td><input id="aki-latin-max" type="number" min="-100" max="200" step="1" value="0" style="width:56px" aria-label="和欧文間 最大 %"></td></tr></tbody></table><label><input id="aki-justify" type="checkbox">最大値まで広げて行末を揃える（最終行を除く）</label><p>変更後は下の「選択文字・段落に適用」を押してください。</p></details><p class="wide">文字の一部を選択し、上部の書体・サイズ・色などを変更すると、その範囲に適用されます。</p><label>段落前<input id="type-before" type="number" min="0" max="10000" step="any" value="0" required=""></label><label>段落後<input id="type-after" type="number" min="0" max="10000" step="any" value="0" required=""></label><label>字下げ<input id="type-indent" type="number" min="-10000" max="10000" step="any" value="0" required=""></label><label>カーニング<input id="type-kerning" type="number" min="-1000" max="1000" step="any" value="0" required=""></label><label>段数<input id="type-columns" type="number" min="1" max="8" step="1" value="1" required=""></label><label>段間<input id="type-column-gap" type="number" min="0" max="10000" step="any" value="20" required=""></label><label><input id="type-feature-liga" type="checkbox" checked="">合字</label><label><input id="type-feature-kern" type="checkbox" checked="">自動カーニング</label><label><input id="type-feature-smcp" type="checkbox">スモールキャップ</label><label><input id="type-feature-onum" type="checkbox">オールドスタイル数字</label><label><input id="type-feature-frac" type="checkbox">分数</label><label class="wide">段落の対象<select id="type-paragraph-scope"><option value="all">テキスト全体</option><option value="selected">カーソル・選択範囲の段落</option></select></label><label>開き約物の後 px<input id="type-opening-gap" type="number" min="0" max="100" step="any" value="0" required=""></label><label>閉じ約物の前 px<input id="type-closing-gap" type="number" min="0" max="100" step="any" value="0" required=""></label><label>追い込み限度 %<input id="type-pull-limit" type="number" min="0" max="30" step="any" value="15" required=""></label><label class="wide">追加の行頭禁則文字<input id="type-no-start" type="text" maxlength="100" value=""></label><label class="wide">追加の行末禁則文字<input id="type-no-end" type="text" maxlength="100" value=""></label><label>禁則<select id="type-kinsoku"><option value="standard">標準</option><option value="strict">強い禁則</option><option value="none">なし</option></select></label><label>行末処理<select id="type-punctuation"><option value="push">追い出し</option><option value="pull">追い込み</option><option value="hang">句読点のぶら下がり</option></select></label><label>ベースライン px<input id="type-baseline-shift" type="number" min="-1000" max="1000" step="any" value="0" required=""></label><button id="type-combine-range" class="wide" type="button" onclick="changeManualTextCombine()">選択範囲を縦中横にする</button><button id="type-uncombine-range" class="wide" type="button" onclick="changeManualTextCombine(true)">選択範囲の縦中横を解除</button><label>文字の向き<select id="type-orientation"><option value="mixed">標準</option><option value="upright">正立</option><option value="sideways">横倒し</option></select></label><label>文字回転 °<input id="type-rotation" type="number" min="-180" max="180" step="any" value="0" required=""></label><label><input id="type-combine" type="checkbox">縦中横（2〜4桁の数字）</label><button id="type-connect-frames" class="wide" type="button" onclick="connectTextFrames()">選択した文字枠を連結</button><button id="type-disconnect-frames" class="wide" type="button" onclick="disconnectTextFrames()">文字枠の連結を解除</button><button id="type-apply" class="wide" type="button" onclick="applyTypography()">選択文字・段落に適用</button></div></details>
-<details class="panel-section" id="mesh-panel"><summary>カラーメッシュ</summary><div class="panel-content property-fields"><label class="wide">面の補間<select id="mesh-surface" onchange="setMeshSurface()"><option value="coons">ベジェ曲面</option><option value="linear">三角形補間</option></select></label><label class="wide"><input id="mesh-vector" type="checkbox" onchange="setMeshSurface()">SVGを近似ポリゴンで出力</label><label class="wide">方向線<select id="mesh-handle-direction" onchange="syncMeshControls()"><option value="uOut">右</option><option value="uIn">左</option><option value="vOut">下</option><option value="vIn">上</option></select></label><label>方向 X %<input id="mesh-handle-x" type="number" min="-100" max="100" step="any" value="0" required=""></label><label>方向 Y %<input id="mesh-handle-y" type="number" min="-100" max="100" step="any" value="0" required=""></label><button id="mesh-handle-apply" class="wide" type="button" onclick="updateMeshHandle()">方向線を更新</button><button id="mesh-handle-reset" class="wide" type="button" onclick="updateMeshHandle(true)">方向線を直線に戻す</button><label>行<input id="mesh-rows" type="number" min="2" max="6" step="1" value="3" required=""></label><label>列<input id="mesh-columns" type="number" min="2" max="6" step="1" value="3" required=""></label><button class="wide" type="button" onclick="startMeshEditor()">選択した図形のメッシュを作成・編集</button><p class="wide">格子点をタップして色を変更し、ドラッグして位置を調整できます。メッシュは保存後も再編集できます。画面は512pxのテクスチャで描画。曲面の方向線を直接編集でき、PDFは曲面のまま出力します。SVGは画像または近似ポリゴンを選べます。</p></div></details><details class="panel-section" id="brush-panel"><summary>ブラシ</summary><div class="panel-content property-fields"><button class="wide" type="button" onclick="setTool('paintbrush')">ブラシツールで描く（B）</button><div id="brush-preset-gallery" class="wide"></div><button id="brush-file-import" class="wide" type="button" onclick="document.getElementById('brush-files').click()">SVG・PDF・AI・ブラシパックを読み込む…</button><input id="brush-files" type="file" accept=".svg,.json,.pdf,.ai,image/svg+xml,application/json,application/pdf" multiple="" hidden="" onchange="readBrushFiles(this)"><button id="brush-pack-export" class="wide" type="button" onclick="downloadSelectedBrushPack()">選択中のブラシをパック保存…</button><p class="wide">SVG・PDF・PDF互換AIの図形をブラシ原型として取り込みます。PDFは1ページを1原型にします。Illustrator独自のブラシ設定・EPSには未対応です。ZIPは解凍してください。</p><label class="wide">原型の名前<input id="art-asset-name" type="text" maxlength="80"></label><button class="wide" type="button" id="brush-register" onclick="registerArtAsset()">選択図形を原型として登録</button><label class="wide">原型<select id="brush-asset-picker"></select></label><label class="wide">配色<select id="brush-color-mode"><option value="stroke">選択した色</option><option value="original">原型の色</option></select></label><label class="wide">種類<select id="brush-kind"><option value="pattern">パターンブラシ</option><option value="art">アートブラシ</option><option value="scatter">散布ブラシ</option></select></label><label>太さ<input id="brush-width" type="number" min="0.1" max="1000" value="20" step="any" required=""></label><label>間隔<input id="brush-spacing" type="number" min="0" max="1000" value="5" step="any" required=""></label><label>散布幅<input id="brush-scatter" type="number" min="0" max="500" value="20" step="any" required=""></label><label>回転<input id="brush-rotation" type="number" min="-3600" max="3600" value="0" step="any" required=""></label><label>乱数の種<input id="brush-seed" type="number" min="0" max="2147483647" value="1" step="1" required=""></label><label class="wide"><input id="brush-pressure-enabled" type="checkbox">ペンの筆圧で太さを変える</label><label>最小太さ %<input id="brush-pressure-min" type="number" min="1" max="100" value="20" required=""></label><label>伸縮開始 %<input id="brush-stretch-start" type="number" min="0" max="99" value="0" required=""></label><label>伸縮終了 %<input id="brush-stretch-end" type="number" min="1" max="100" value="100" required=""></label><label class="wide">開始タイル<select id="brush-tile-start"><option value="">なし</option></select></label><label class="wide">終端タイル<select id="brush-tile-end"><option value="">なし</option></select></label><label class="wide">角タイル<select id="brush-tile-corner"><option value="">なし</option></select></label><label class="wide">内角タイル<select id="brush-tile-inner"><option value="">なし</option></select></label><label class="wide">外角タイル<select id="brush-tile-outer"><option value="">なし</option></select></label><button class="wide" type="button" id="brush-apply" onclick="applyArtBrush()">選択した線に適用・更新</button><button class="wide" type="button" id="brush-remove" onclick="applyArtBrush(true)">ブラシを解除</button></div></details>
-<details class="panel-section" id="pattern-panel"><summary>パターン</summary><div class="panel-content property-fields"><div id="pattern-preset-gallery" class="wide"></div><p class="wide">図形を選択して見本をタップすると、その図形の中を模様で塗ります。</p><label class="wide">原型<select id="pattern-asset-picker" onchange="patternChoiceChanged()"></select></label><label>模様色<input id="pattern-color" type="color" value="#000000"></label><label><input id="pattern-background-enabled" type="checkbox" onchange="updatePatternPresetControls()">背景を塗る</label><label>背景色<input id="pattern-background" type="color" value="#ffffff" disabled=""></label><label>タイル幅<input id="pattern-width" type="number" min="1" max="10000" step="any" value="40" required=""></label><label>タイル高さ<input id="pattern-height" type="number" min="1" max="10000" step="any" value="40" required=""></label><label>角度<input id="pattern-angle" type="number" min="-3600" max="3600" step="any" value="0" required=""></label><label>X<input id="pattern-x" type="number" min="-10000" max="10000" step="any" value="0" required=""></label><label>Y<input id="pattern-y" type="number" min="-10000" max="10000" step="any" value="0" required=""></label><button id="pattern-apply" class="wide" type="button" onclick="applyPatternFill()">塗りに適用・更新</button><button id="pattern-remove" class="wide" type="button" onclick="applyPatternFill(true)">パターンを解除</button><details class="wide" id="pattern-custom-registration"><summary>自分の原型を追加</summary><p>①模様にしたい図形を描いて選択 → ②名前を付けて登録 → ③塗る図形を選び、上の「塗りに適用・更新」を押します。</p><label>原型の名前<input id="pattern-asset-name" type="text" maxlength="80" placeholder="例：花の模様"></label><button id="pattern-register" type="button" onclick="registerPatternAsset()">選択図形をパターンの原型に登録</button><button id="pattern-file-import" type="button" onclick="document.getElementById('pattern-file').click()">SVGの原型を読み込む…</button><input id="pattern-file" type="file" accept=".svg,image/svg+xml" hidden="" onchange="readPatternFile(this)"><p>登録した原型は元の色で使います。追加した原型を残すには、プロジェクトを保存してください。</p></details></div></details>
+      <details class="panel-section" id="print-panel"><summary>印刷・PDF</summary><div class="panel-content property-fields"><label class="wide"><input id="pdf-import-raster" data-help-label="未対応のPDFを画像として配置" data-help="図形として読み込めないPDFページを、見た目を保つ画像として配置します。そのページ内の文字やパスは編集できません。オフでは対応外のページがあると読込を取り消します。" type="checkbox" checked>読込時、未対応のPDFページは画像として配置</label><p class="wide">画像配置したページ内の文字・パスは編集できません。</p><button class="wide" type="button" data-help="SVGの効果やPDFのページを、見た目を保つ画像として配置します。画像内の文字・パスは編集できません。PDFは1ページ目を配置し、画像は長辺2000px以内です。" onclick="document.getElementById('visual-artwork-file').click()">SVG・PDFを見た目のまま画像配置</button><input id="visual-artwork-file" type="file" accept=".svg,.pdf,.ai" hidden onchange="readVisualArtworkFile(this)"><label class="wide"><input id="live-proof-enabled" data-help-label="ICCプルーフを自動更新" data-help="現在のアートボードをICC変換した見本を編集後に自動更新します。作品の元の色は変更しません。" type="checkbox" onchange="toggleLiveProof()">ICCプルーフを編集後に自動更新</label><img id="live-proof-preview" class="wide" hidden alt="ICCプルーフ" style="max-width:100%;background:white"><p id="live-proof-status" class="wide" role="status"></p><label class="wide">保存方式<select id="print-flatten"><option value="vector">ベクトルを保持</option><option value="cmyk">CMYK画像に統合（白背景）</option></select></label><button class="wide" type="button" data-help="保存したPDFの識別情報・ICC出力条件・書体埋込・透明効果・ページ枠を検査します。PDF/Xの全規定への適合認証ではありません。" onclick="document.getElementById('pdf-inspection-file').click()">保存したPDFの構造を検査</button><input id="pdf-inspection-file" type="file" accept=".pdf,.ai" hidden onchange="inspectPrintPDFFile(this)"><button class="wide" type="button" data-help="実際の端末で確認する項目と、結果を保存する画面を開きます。未確認の項目は合格にしません。" title="端末の動作確認" onclick="openDeviceChecks()">端末の動作確認・結果の保存</button><button id="print-preflight" class="wide" type="button" onclick="showPrintPreflight()">出力前の確認</button><p id="print-preflight-result" class="wide" role="status"></p><label class="wide">ページ<select id="print-pages"><option value="active">選択中のアートボード</option><option value="all">全アートボード</option></select></label><label class="wide">色<select id="print-space"><option value="CMYK">CMYK（ICC変換）</option><option value="RGB">sRGB（ICC付き）</option></select></label><label class="wide">出力プロファイル<span id="print-profile-name"></span><input type="file" accept=".icc,.icm" onchange="loadOutputICC(this)"></label><label class="wide">変換方法<select id="print-intent"><option value="1">相対的な色域を維持・黒点補正</option><option value="0">知覚的</option><option value="3">絶対的な色域を維持</option></select></label><label>効果の解像度 dpi<input id="print-dpi" type="number" min="72" max="600" step="1" value="300" required></label><label>塗り足し mm<input id="print-bleed" type="number" min="0" max="20" step="any" value="3" required></label><label class="wide"><input id="print-marks" type="checkbox">トンボを付ける</label><button class="wide" type="button" onclick="showColorProof()">ICCソフトプルーフを表示</button><label class="wide"><input id="print-source" type="checkbox" checked>編集用SVGをPDFに添付</label><button class="wide" type="button" onclick="downloadPrintPDF()">PDFを保存</button><button class="wide" type="button" onclick="downloadPrintPDF(true)">PDF互換AIを保存</button><p class="wide">通常の図形・線・取得済み書体はベクトルで保存。ぼかし・マスク・パターン・未取得書体は指定解像度で画像化します。AIはIllustratorで開けるPDF互換形式です。Adobe独自の編集データは含みません。</p><label>C %<input id="ink-c" type="number" min="0" max="100" step="any" value="0" required></label><label>M %<input id="ink-m" type="number" min="0" max="100" step="any" value="0" required></label><label>Y %<input id="ink-y" type="number" min="0" max="100" step="any" value="0" required></label><label>K %<input id="ink-k" type="number" min="0" max="100" step="any" value="100" required></label><button class="wide" type="button" onclick="applyCMYKPaint()">選択中の塗り・線にCMYK値を適用</button></div></details>
+<details class="panel-section" id="typography-panel"><summary>文字・段落</summary><div class="panel-content property-fields"><details class="wide"><summary>文字組みアキ量</summary><p>文字サイズに対する割合（%）。行に収まらない場合は最小値まで詰めます。</p><table><thead><tr><th>種類</th><th>最小</th><th>標準</th><th>最大</th></tr></thead><tbody><tr><th>開き約物の後</th><td><input id="aki-open-min" type="number" min="-100" max="200" step="1" value="0" style="width:56px" aria-label="開き約物の後 最小 %"></td><td><input id="aki-open-opt" type="number" min="-100" max="200" step="1" value="0" style="width:56px" aria-label="開き約物の後 標準 %"></td><td><input id="aki-open-max" type="number" min="-100" max="200" step="1" value="0" style="width:56px" aria-label="開き約物の後 最大 %"></td></tr><tr><th>閉じ約物の前</th><td><input id="aki-close-min" type="number" min="-100" max="200" step="1" value="0" style="width:56px" aria-label="閉じ約物の前 最小 %"></td><td><input id="aki-close-opt" type="number" min="-100" max="200" step="1" value="0" style="width:56px" aria-label="閉じ約物の前 標準 %"></td><td><input id="aki-close-max" type="number" min="-100" max="200" step="1" value="0" style="width:56px" aria-label="閉じ約物の前 最大 %"></td></tr><tr><th>中間約物</th><td><input id="aki-middle-min" type="number" min="-100" max="200" step="1" value="0" style="width:56px" aria-label="中間約物 最小 %"></td><td><input id="aki-middle-opt" type="number" min="-100" max="200" step="1" value="0" style="width:56px" aria-label="中間約物 標準 %"></td><td><input id="aki-middle-max" type="number" min="-100" max="200" step="1" value="0" style="width:56px" aria-label="中間約物 最大 %"></td></tr><tr><th>和欧文間</th><td><input id="aki-latin-min" type="number" min="-100" max="200" step="1" value="0" style="width:56px" aria-label="和欧文間 最小 %"></td><td><input id="aki-latin-opt" type="number" min="-100" max="200" step="1" value="0" style="width:56px" aria-label="和欧文間 標準 %"></td><td><input id="aki-latin-max" type="number" min="-100" max="200" step="1" value="0" style="width:56px" aria-label="和欧文間 最大 %"></td></tr></tbody></table><label><input id="aki-justify" type="checkbox">最大値まで広げて行末を揃える（最終行を除く）</label><p>変更後は下の「選択文字・段落に適用」を押してください。</p></details><p class="wide">文字の一部を選択し、上部の書体・サイズ・色などを変更すると、その範囲に適用されます。</p><label>段落前<input id="type-before" type="number" min="0" max="10000" step="any" value="0" required></label><label>段落後<input id="type-after" type="number" min="0" max="10000" step="any" value="0" required></label><label>字下げ<input id="type-indent" type="number" min="-10000" max="10000" step="any" value="0" required></label><label>カーニング<input id="type-kerning" type="number" min="-1000" max="1000" step="any" value="0" required></label><label>段数<input id="type-columns" type="number" min="1" max="8" step="1" value="1" required></label><label>段間<input id="type-column-gap" type="number" min="0" max="10000" step="any" value="20" required></label><label><input id="type-feature-liga" type="checkbox" checked>合字</label><label><input id="type-feature-kern" type="checkbox" checked>自動カーニング</label><label><input id="type-feature-smcp" type="checkbox">スモールキャップ</label><label><input id="type-feature-onum" type="checkbox">オールドスタイル数字</label><label><input id="type-feature-frac" type="checkbox">分数</label><label class="wide">段落の対象<select id="type-paragraph-scope"><option value="all">テキスト全体</option><option value="selected">カーソル・選択範囲の段落</option></select></label><label>開き約物の後 px<input id="type-opening-gap" type="number" min="0" max="100" step="any" value="0" required></label><label>閉じ約物の前 px<input id="type-closing-gap" type="number" min="0" max="100" step="any" value="0" required></label><label>追い込み限度 %<input id="type-pull-limit" type="number" min="0" max="30" step="any" value="15" required></label><label class="wide">追加の行頭禁則文字<input id="type-no-start" type="text" maxlength="100" value=""></label><label class="wide">追加の行末禁則文字<input id="type-no-end" type="text" maxlength="100" value=""></label><label>禁則<select id="type-kinsoku"><option value="standard">標準</option><option value="strict">強い禁則</option><option value="none">なし</option></select></label><label>行末処理<select id="type-punctuation"><option value="push">追い出し</option><option value="pull">追い込み</option><option value="hang">句読点のぶら下がり</option></select></label><label>ベースライン px<input id="type-baseline-shift" type="number" min="-1000" max="1000" step="any" value="0" required></label><button id="type-combine-range" class="wide" type="button" onclick="changeManualTextCombine()">選択範囲を縦中横にする</button><button id="type-uncombine-range" class="wide" type="button" onclick="changeManualTextCombine(true)">選択範囲の縦中横を解除</button><label>文字の向き<select id="type-orientation"><option value="mixed">標準</option><option value="upright">正立</option><option value="sideways">横倒し</option></select></label><label>文字回転 °<input id="type-rotation" type="number" min="-180" max="180" step="any" value="0" required></label><label><input id="type-combine" type="checkbox">縦中横（2〜4桁の数字）</label><button id="type-connect-frames" class="wide" type="button" onclick="connectTextFrames()">選択した文字枠を連結</button><button id="type-disconnect-frames" class="wide" type="button" onclick="disconnectTextFrames()">文字枠の連結を解除</button><button id="type-apply" class="wide" type="button" onclick="applyTypography()">選択文字・段落に適用</button></div></details>
+<details class="panel-section" id="mesh-panel"><summary>カラーメッシュ</summary><div class="panel-content property-fields"><label class="wide">面の補間<select id="mesh-surface" onchange="setMeshSurface()"><option value="coons">ベジェ曲面</option><option value="linear">三角形補間</option></select></label><label class="wide"><input id="mesh-vector" type="checkbox" onchange="setMeshSurface()">SVGを近似ポリゴンで出力</label><label class="wide">方向線<select id="mesh-handle-direction" onchange="syncMeshControls()"><option value="uOut">右</option><option value="uIn">左</option><option value="vOut">下</option><option value="vIn">上</option></select></label><label>方向 X %<input id="mesh-handle-x" type="number" min="-100" max="100" step="any" value="0" required></label><label>方向 Y %<input id="mesh-handle-y" type="number" min="-100" max="100" step="any" value="0" required></label><button id="mesh-handle-apply" class="wide" type="button" onclick="updateMeshHandle()">方向線を更新</button><button id="mesh-handle-reset" class="wide" type="button" onclick="updateMeshHandle(true)">方向線を直線に戻す</button><label>行<input id="mesh-rows" type="number" min="2" max="6" step="1" value="3" required></label><label>列<input id="mesh-columns" type="number" min="2" max="6" step="1" value="3" required></label><button class="wide" type="button" onclick="startMeshEditor()">選択した図形のメッシュを作成・編集</button><p class="wide">格子点をタップして色を変更し、ドラッグして位置を調整できます。メッシュは保存後も再編集できます。画面は512pxのテクスチャで描画。曲面の方向線を直接編集でき、PDFは曲面のまま出力します。SVGは画像または近似ポリゴンを選べます。</p></div></details><details class="panel-section" id="brush-panel"><summary>ブラシ</summary><div class="panel-content property-fields"><button class="wide" type="button" onclick="setTool('paintbrush')">ブラシツールで描く（B）</button><div id="brush-preset-gallery" class="wide"></div><button id="brush-file-import" class="wide" type="button" onclick="document.getElementById('brush-files').click()">SVG・PDF・AI・ブラシパックを読み込む…</button><input id="brush-files" type="file" accept=".svg,.json,.pdf,.ai,image/svg+xml,application/json,application/pdf" multiple hidden onchange="readBrushFiles(this)"><button id="brush-pack-export" class="wide" type="button" onclick="downloadSelectedBrushPack()">選択中のブラシをパック保存…</button><p class="wide">SVG・PDF・PDF互換AIの図形をブラシ原型として取り込みます。PDFは1ページを1原型にします。Illustrator独自のブラシ設定・EPSには未対応です。ZIPは解凍してください。</p><label class="wide">原型の名前<input id="art-asset-name" type="text" maxlength="80"></label><button class="wide" type="button" id="brush-register" onclick="registerArtAsset()">選択図形を原型として登録</button><label class="wide">原型<select id="brush-asset-picker"></select></label><label class="wide">配色<select id="brush-color-mode"><option value="stroke">選択した色</option><option value="original">原型の色</option></select></label><label class="wide">種類<select id="brush-kind"><option value="pattern">パターンブラシ</option><option value="art">アートブラシ</option><option value="scatter">散布ブラシ</option></select></label><label>太さ<input id="brush-width" type="number" min="0.1" max="1000" value="20" step="any" required></label><label>間隔<input id="brush-spacing" type="number" min="0" max="1000" value="5" step="any" required></label><label>散布幅<input id="brush-scatter" type="number" min="0" max="500" value="20" step="any" required></label><label>回転<input id="brush-rotation" type="number" min="-3600" max="3600" value="0" step="any" required></label><label>乱数の種<input id="brush-seed" type="number" min="0" max="2147483647" value="1" step="1" required></label><label class="wide"><input id="brush-pressure-enabled" type="checkbox">ペンの筆圧で太さを変える</label><label>最小太さ %<input id="brush-pressure-min" type="number" min="1" max="100" value="20" required></label><label>伸縮開始 %<input id="brush-stretch-start" type="number" min="0" max="99" value="0" required></label><label>伸縮終了 %<input id="brush-stretch-end" type="number" min="1" max="100" value="100" required></label><label class="wide">開始タイル<select id="brush-tile-start"><option value="">なし</option></select></label><label class="wide">終端タイル<select id="brush-tile-end"><option value="">なし</option></select></label><label class="wide">角タイル<select id="brush-tile-corner"><option value="">なし</option></select></label><label class="wide">内角タイル<select id="brush-tile-inner"><option value="">なし</option></select></label><label class="wide">外角タイル<select id="brush-tile-outer"><option value="">なし</option></select></label><button class="wide" type="button" id="brush-apply" onclick="applyArtBrush()">選択した線に適用・更新</button><button class="wide" type="button" id="brush-remove" onclick="applyArtBrush(true)">ブラシを解除</button></div></details>
+<details class="panel-section" id="pattern-panel"><summary>パターン</summary><div class="panel-content property-fields"><div id="pattern-preset-gallery" class="wide"></div><p class="wide">図形を選択して見本をタップすると、その図形の中を模様で塗ります。</p><label class="wide">原型<select id="pattern-asset-picker" onchange="patternChoiceChanged()"></select></label><label>模様色<input id="pattern-color" type="color" value="#000000"></label><label><input id="pattern-background-enabled" type="checkbox" onchange="updatePatternPresetControls()">背景を塗る</label><label>背景色<input id="pattern-background" type="color" value="#ffffff" disabled></label><label>タイル幅<input id="pattern-width" type="number" min="1" max="10000" step="any" value="40" required></label><label>タイル高さ<input id="pattern-height" type="number" min="1" max="10000" step="any" value="40" required></label><label>角度<input id="pattern-angle" type="number" min="-3600" max="3600" step="any" value="0" required></label><label>X<input id="pattern-x" type="number" min="-10000" max="10000" step="any" value="0" required></label><label>Y<input id="pattern-y" type="number" min="-10000" max="10000" step="any" value="0" required></label><button id="pattern-apply" class="wide" type="button" onclick="applyPatternFill()">塗りに適用・更新</button><button id="pattern-remove" class="wide" type="button" onclick="applyPatternFill(true)">パターンを解除</button><details class="wide" id="pattern-custom-registration"><summary>自分の原型を追加</summary><p>①模様にしたい図形を描いて選択 → ②名前を付けて登録 → ③塗る図形を選び、上の「塗りに適用・更新」を押します。</p><label>原型の名前<input id="pattern-asset-name" type="text" maxlength="80" placeholder="例：花の模様"></label><button id="pattern-register" type="button" onclick="registerPatternAsset()">選択図形をパターンの原型に登録</button><button id="pattern-file-import" type="button" onclick="document.getElementById('pattern-file').click()">SVGの原型を読み込む…</button><input id="pattern-file" type="file" accept=".svg,image/svg+xml" hidden onchange="readPatternFile(this)"><p>登録した原型は元の色で使います。追加した原型を残すには、プロジェクトを保存してください。</p></details></div></details>
 <details class="panel-section" id="symbol-panel"><summary>シンボル</summary><div class="panel-content property-fields"><label class="wide">名前<input id="symbol-name" type="text" maxlength="80" placeholder="新しいシンボル"></label><button type="button" class="wide" onclick="createSymbol()">選択からシンボルを登録</button><label class="wide">ライブラリ<select id="symbol-library-picker"></select></label><button id="symbol-place" type="button" onclick="placeSymbol()">配置</button><button type="button" onclick="expandSymbols()">リンクを解除</button><button id="symbol-update" class="wide" type="button" onclick="updateSymbolDefinition()">選択した図形から定義を更新</button><p class="wide">インスタンスは移動・回転・拡大縮小できます。内容を変更するにはリンクを解除して編集し、ライブラリの項目を選んで「定義を更新」を押します。</p></div></details>
-<details class="panel-section" id="appearance-stack-panel"><summary>アピアランス</summary><div class="appearance-stack-actions"><button type="button" onclick="addAppearanceLayer('fill')">塗りを追加</button><button type="button" onclick="addAppearanceLayer('stroke')">線を追加</button></div><p>下の項目ほど前面に描画されます。元の塗りと線も1つの項目として残ります。</p><div id="appearance-stack-list"></div><div id="appearance-stack-fields" class="hidden"><label><input id="appearance-layer-visible" type="checkbox" onchange="changeAppearanceLayer('update')">表示</label><label>色<input id="appearance-layer-paint" type="color" onchange="changeAppearanceLayer('update')"></label><label>線幅<input id="appearance-layer-width" type="number" min="0" max="5000" step="any" required="" onchange="changeAppearanceLayer('update')"></label><label>不透明度 %<input id="appearance-layer-opacity" type="number" min="0" max="100" step="any" required="" onchange="changeAppearanceLayer('update')"></label><label>横位置<input id="appearance-layer-x" type="number" min="-10000" max="10000" step="any" required="" onchange="changeAppearanceLayer('update')"></label><label>縦位置<input id="appearance-layer-y" type="number" min="-10000" max="10000" step="any" required="" onchange="changeAppearanceLayer('update')"></label><label>幅の倍率 %<input id="appearance-layer-scale-x" type="number" min="1" max="1000" step="any" value="100" required="" onchange="changeAppearanceLayer('update')"></label><label>高さの倍率 %<input id="appearance-layer-scale-y" type="number" min="1" max="1000" step="any" value="100" required="" onchange="changeAppearanceLayer('update')"></label><label>ぼかし<input id="appearance-layer-blur" type="number" min="0" max="200" step="any" required="" onchange="changeAppearanceLayer('update')"></label><div class="appearance-stack-actions"><button type="button" onclick="changeAppearanceLayer('down')">背面へ</button><button type="button" onclick="changeAppearanceLayer('up')">前面へ</button><button type="button" onclick="changeAppearanceLayer('remove')">削除</button></div></div></details>
+<details class="panel-section" id="appearance-stack-panel"><summary>アピアランス</summary><div class="appearance-stack-actions"><button type="button" onclick="addAppearanceLayer('fill')">塗りを追加</button><button type="button" onclick="addAppearanceLayer('stroke')">線を追加</button></div><p>下の項目ほど前面に描画されます。元の塗りと線も1つの項目として残ります。</p><div id="appearance-stack-list"></div><div id="appearance-stack-fields" class="hidden"><label><input id="appearance-layer-visible" type="checkbox" onchange="changeAppearanceLayer('update')">表示</label><label>色<input id="appearance-layer-paint" type="color" onchange="changeAppearanceLayer('update')"></label><label>線幅<input id="appearance-layer-width" type="number" min="0" max="5000" step="any" required onchange="changeAppearanceLayer('update')"></label><label>不透明度 %<input id="appearance-layer-opacity" type="number" min="0" max="100" step="any" required onchange="changeAppearanceLayer('update')"></label><label>横位置<input id="appearance-layer-x" type="number" min="-10000" max="10000" step="any" required onchange="changeAppearanceLayer('update')"></label><label>縦位置<input id="appearance-layer-y" type="number" min="-10000" max="10000" step="any" required onchange="changeAppearanceLayer('update')"></label><label>幅の倍率 %<input id="appearance-layer-scale-x" type="number" min="1" max="1000" step="any" value="100" required onchange="changeAppearanceLayer('update')"></label><label>高さの倍率 %<input id="appearance-layer-scale-y" type="number" min="1" max="1000" step="any" value="100" required onchange="changeAppearanceLayer('update')"></label><label>ぼかし<input id="appearance-layer-blur" type="number" min="0" max="200" step="any" required onchange="changeAppearanceLayer('update')"></label><div class="appearance-stack-actions"><button type="button" onclick="changeAppearanceLayer('down')">背面へ</button><button type="button" onclick="changeAppearanceLayer('up')">前面へ</button><button type="button" onclick="changeAppearanceLayer('remove')">削除</button></div></div></details>
 <details class="panel-section" id="creative-panel">
         <summary>変形・リピート・ブレンド</summary>
         <div class="panel-content property-fields">
           <h3 class="wide">シアー</h3>
-          <label>角度 <input id="shear-angle" type="number" min="-80" max="80" value="15" step="any" required=""></label>
+          <label>角度 <input id="shear-angle" type="number" min="-80" max="80" value="15" step="any" required></label>
           <label>方向 <select id="shear-axis"><option value="horizontal">水平</option><option value="vertical">垂直</option></select></label>
           <button class="wide" type="button" onclick="releaseLiveLinks()">選択した図形の連動を解除</button><button class="wide" type="button" onclick="shearSelection()">シアーを適用</button>
-          <label class="wide"><input id="repeat-linked" type="checkbox" checked="">元図形の変更に連動</label><h3 class="wide">グリッドリピート</h3>
-          <label>列 <input id="repeat-columns" type="number" min="1" max="20" value="3" required=""></label>
-          <label>行 <input id="repeat-rows" type="number" min="1" max="20" value="2" required=""></label>
-          <label>横間隔 <input id="repeat-gap-x" type="number" min="-10000" max="10000" value="20" step="any" required=""></label>
-          <label>縦間隔 <input id="repeat-gap-y" type="number" min="-10000" max="10000" value="20" step="any" required=""></label>
+          <label class="wide"><input id="repeat-linked" type="checkbox" checked>元図形の変更に連動</label><h3 class="wide">グリッドリピート</h3>
+          <label>列 <input id="repeat-columns" type="number" min="1" max="20" value="3" required></label>
+          <label>行 <input id="repeat-rows" type="number" min="1" max="20" value="2" required></label>
+          <label>横間隔 <input id="repeat-gap-x" type="number" min="-10000" max="10000" value="20" step="any" required></label>
+          <label>縦間隔 <input id="repeat-gap-y" type="number" min="-10000" max="10000" value="20" step="any" required></label>
           <button class="wide" type="button" onclick="repeatSelection(false)">グリッドを作成</button>
           <h3 class="wide">放射状リピート</h3>
-          <label>個数 <input id="repeat-count" type="number" min="2" max="100" value="6" required=""></label>
+          <label>個数 <input id="repeat-count" type="number" min="2" max="100" value="6" required></label>
           <span></span>
-          <label>中心X <input id="repeat-center-x" type="number" min="-10000" max="10000" value="400" step="any" required=""></label>
-          <label>中心Y <input id="repeat-center-y" type="number" min="-10000" max="10000" value="300" step="any" required=""></label>
+          <label>中心X <input id="repeat-center-x" type="number" min="-10000" max="10000" value="400" step="any" required></label>
+          <label>中心Y <input id="repeat-center-y" type="number" min="-10000" max="10000" value="300" step="any" required></label>
           <button class="wide" type="button" onclick="repeatSelection(true)">放射状に作成</button>
         </div>
       </details>
       <section class="panel-section" id="blend-panel" aria-label="ブレンド">
         <div class="panel-content property-fields">
           <label>間隔 <select id="blend-spacing" data-help="色を滑らかにつなぐ、ステップ数を指定、距離を指定のいずれかを選びます。">
-            <option value="smooth">滑らかな色</option><option value="steps" selected="">ステップ</option><option value="distance">距離</option>
+            <option value="smooth">滑らかな色</option><option value="steps" selected>ステップ</option><option value="distance">距離</option>
           </select></label>
-          <label id="blend-step-row">ステップ <input id="blend-steps" type="number" min="1" max="100" value="5" required=""></label>
-          <label id="blend-distance-row" class="hidden">距離 px <input id="blend-distance" data-help-label="ブレンドの距離" type="number" min="1" max="1000" step="any" value="20" required="" data-help="軸に沿った間隔の目安をpxで指定します。"></label>
+          <label id="blend-step-row">ステップ <input id="blend-steps" type="number" min="1" max="100" value="5" required></label>
+          <label id="blend-distance-row" class="hidden">距離 px <input id="blend-distance" data-help-label="ブレンドの距離" type="number" min="1" max="1000" step="any" value="20" required data-help="軸に沿った間隔の目安をpxで指定します。"></label>
           <label class="wide">方向 <select id="blend-orientation" data-help="図形の向きをページに揃えるか、ブレンド軸の接線に沿わせるか選びます。">
             <option value="page">ページに沿う</option><option value="path">パスに沿う</option></select></label>
           <label class="wide">前後 <button type="button" id="blend-front" onclick="blendCommand('front')" data-help="ブレンド内の図形が手前から奥に並ぶ順序を反転します。">前後を反転</button></label>
-          <details class="wide" open="">
+          <details class="wide" open>
             <summary data-help="軸上で中間図形が集まる位置を調整します。">イージング</summary>
             <label>種類 <select id="blend-ease" data-help="始点、終点、または両端に中間図形を集めます。">
               <option value="linear">均等</option><option value="in">イーズイン</option><option value="out">イーズアウト</option><option value="inout">イーズイン・アウト</option></select></label>
-            <label class="blend-slider-row">ランプ <input id="blend-ramp-range" type="range" min="0" max="100" value="0" aria-label="イージングのランプ" data-help="イージングの強さを調整します。"><input id="blend-ramp" type="number" min="0" max="100" value="0" required="" data-inline-range="" aria-label="ランプ %" data-help="0%では中間図形を均等に配置します。"></label>
+            <label class="blend-slider-row">ランプ <input id="blend-ramp-range" type="range" min="0" max="100" value="0" aria-label="イージングのランプ" data-help="イージングの強さを調整します。"><input id="blend-ramp" type="number" min="0" max="100" value="0" required data-inline-range aria-label="ランプ %" data-help="0%では中間図形を均等に配置します。"></label>
           </details>
-          <details class="wide" open="">
+          <details class="wide" open>
             <summary data-help="形の位置を保ったまま、中間色の位置を調整します。">アピアランス</summary>
-            <label class="blend-slider-row">シフト <input id="blend-shift-range" type="range" min="0" max="100" value="50" aria-label="色のシフト" data-help="中間色が現れる位置を動かします。"><input id="blend-shift" type="number" min="0" max="100" value="50" required="" data-inline-range="" aria-label="シフト %" data-help="50%で色の中間点は軸の中央になります。"></label>
+            <label class="blend-slider-row">シフト <input id="blend-shift-range" type="range" min="0" max="100" value="50" aria-label="色のシフト" data-help="中間色が現れる位置を動かします。"><input id="blend-shift" type="number" min="0" max="100" value="50" required data-inline-range aria-label="シフト %" data-help="50%で色の中間点は軸の中央になります。"></label>
           </details>
-          <details class="wide" open="">
+          <details class="wide" open>
             <summary data-help="中間図形を並べる軸の向きを変更したり、開いたパスに置き換えたりします。">ブレンド軸</summary>
             <div class="object-actions">
               <button type="button" id="blend-reverse-spine" onclick="blendCommand('reverse')" data-help="ブレンドの始点と終点の向きを入れ替えます。">ブレンド軸を反転</button>
@@ -2958,17 +2984,17 @@ body {
           <h3 class="wide" data-help="選択した図形からブレンドを作成するか、中間図形を個別のパスへ展開します。">クイック操作</h3>
           <button class="wide" id="blend-expand" type="button" onclick="blendCommand('expand')" data-help="中間図形の連動を解除し、個別に編集できるようにします。">拡張</button>
           <button class="wide" type="button" onclick="createBlend()">２つの図形から作成</button>
-          <input id="blend-linked" type="checkbox" checked="" hidden="">
+          <input id="blend-linked" type="checkbox" checked hidden>
         </div>
       </section>
       <details class="panel-section" id="width-profile-panel">
         <summary>線幅プロファイル</summary>
         <div class="panel-content property-fields">
           <label class="wide">形 <select id="width-profile-kind"><option value="both">両端を細く</option><option value="start">終点を細く</option><option value="end">始点を細く</option><option value="custom">３点で指定</option></select></label>
-          <label class="wide">最大幅 <input id="profile-width" type="number" min="0.1" max="1000" value="20" step="any" required=""></label>
-          <label>始点 % <input id="profile-start" type="number" min="0" max="300" value="0" step="any" required=""></label>
-          <label>中央 % <input id="profile-middle" type="number" min="0" max="300" value="100" step="any" required=""></label>
-          <label>終点 % <input id="profile-end" type="number" min="0" max="300" value="0" step="any" required=""></label>
+          <label class="wide">最大幅 <input id="profile-width" type="number" min="0.1" max="1000" value="20" step="any" required></label>
+          <label>始点 % <input id="profile-start" type="number" min="0" max="300" value="0" step="any" required></label>
+          <label>中央 % <input id="profile-middle" type="number" min="0" max="300" value="100" step="any" required></label>
+          <label>終点 % <input id="profile-end" type="number" min="0" max="300" value="0" step="any" required></label>
           <button class="wide" type="button" onclick="createWidthProfile()">プロファイルを作成</button>
           <p class="wide">単色・実線の開いたパスを、太さの変わる塗りの形状へ変換します。Undoで元の線に戻せます。</p>
         </div>
@@ -2977,11 +3003,11 @@ body {
         <summary>アートボード</summary>
         <div class="panel-content property-fields">
           <label class="wide">範囲 <select id="artboard-picker" onchange="selectArtboard(this.value)"></select></label>
-          <label class="wide">名前 <input id="artboard-name" type="text" maxlength="80" required=""></label>
-          <label>X <input id="artboard-x" type="number" min="-10000" max="10000" step="any" required=""></label>
-          <label>Y <input id="artboard-y" type="number" min="-10000" max="10000" step="any" required=""></label>
-          <label>幅 <input id="artboard-w" type="number" min="1" max="10000" step="any" required=""></label>
-          <label>高さ <input id="artboard-h" type="number" min="1" max="10000" step="any" required=""></label>
+          <label class="wide">名前 <input id="artboard-name" type="text" maxlength="80" required></label>
+          <label>X <input id="artboard-x" type="number" min="-10000" max="10000" step="any" required></label>
+          <label>Y <input id="artboard-y" type="number" min="-10000" max="10000" step="any" required></label>
+          <label>幅 <input id="artboard-w" type="number" min="1" max="10000" step="any" required></label>
+          <label>高さ <input id="artboard-h" type="number" min="1" max="10000" step="any" required></label>
           <button class="wide" type="button" onclick="applyArtboardFields()">サイズ・位置を適用</button>
           <button id="artboard-add" type="button" onclick="addArtboard()">アートボードを追加</button>
           <button type="button" onclick="addArtboard(true)">選択範囲から追加</button>
@@ -3007,10 +3033,10 @@ body {
           <p>日本語・欧文の基本書体に加え、ドット、極太、手描き、POP、装飾書体を内蔵しています。追加した書体も上部の「書体」から選べます。</p>
           <p id="font-library-status" role="status">基本書体を準備しています…</p><div id="font-library-list"></div>
           <button type="button" onclick="document.getElementById('font-files').click()">フォントファイルを追加…</button>
-          <input id="font-files" type="file" accept=".ttf,.otf,.woff,.woff2" multiple="" hidden="" onchange="readFontFiles(this)">
+          <input id="font-files" type="file" accept=".ttf,.otf,.woff,.woff2" multiple hidden onchange="readFontFiles(this)">
           <button type="button" id="font-pack-export" onclick="downloadFontPack()">追加フォントをバックアップ…</button>
           <button type="button" id="font-pack-import" onclick="document.getElementById('font-pack-file').click()">フォントパックを読み込む…</button>
-          <input id="font-pack-file" type="file" accept=".json,application/json" hidden="" onchange="readFontPack(this)">
+          <input id="font-pack-file" type="file" accept=".json,application/json" hidden onchange="readFontPack(this)">
           <p>追加書体は端末に保存し、次回起動時に復元します。ブラウザの保存データを消すと失われるため、パックも保管してください。</p>
           <p>TTF・OTF・WOFF・WOFF2、1件20MB・合計44MBまで。アウトライン化は可変書体の標準ウェイト、COLR v0、結合文字にも対応します。画像型カラー書体・COLR v1・方向制御を含む組版には制限があります。</p>
           <details><summary>内蔵書体のライセンス</summary><pre id="builtin-font-license"></pre></details>
@@ -3039,11 +3065,11 @@ body {
           </div>
         </div>
       </details>
-      <details class="panel-section" id="layer-panel" open="">
+      <details class="panel-section" id="layer-panel" open>
         <summary>レイヤー</summary>
         <div id="layer-list" role="group" aria-label="前面から順に並べたレイヤー"></div>
         <form id="layer-name-form" class="hidden">
-          <input id="layer-name" aria-label="レイヤー名" type="text" maxlength="80" required="">
+          <input id="layer-name" aria-label="レイヤー名" type="text" maxlength="80" required>
           <button type="submit">適用</button>
           <button type="button" onclick="closeLayerNameEditor()">取消</button>
         </form>
@@ -3107,7 +3133,7 @@ body {
           <div class="panel-content property-fields">
             <label class="wide">塗り規則
               <select id="path-fill-rule" data-appearance="fill-rule">
-                <option value="" disabled="">混在</option>
+                <option value="" disabled>混在</option>
                 <option value="nonzero">非ゼロ</option>
                 <option value="evenodd">偶奇</option>
               </select>
@@ -3142,7 +3168,7 @@ body {
             <div class="wide object-actions">
               <button type="button" onclick="applyNumericTransform()">変形</button>
               <button type="button" onclick="applyNumericTransform(true)">連続複製</button>
-              <button id="repeat-transform" type="button" onclick="repeatNumericTransform()" disabled="">変形を繰り返す</button>
+              <button id="repeat-transform" type="button" onclick="repeatNumericTransform()" disabled>変形を繰り返す</button>
             </div>
         <details class="wide">
           <summary>微移動</summary>
@@ -3209,8 +3235,8 @@ body {
             <label class="wide">分類 <select id="gradient-preset-category" data-help="ギャラリーを配色の種類で絞り込みます。"><option value="">すべて</option></select></label>
             <div class="wide gradient-gallery" id="gradient-preset-gallery" role="group" aria-label="グラデーションのプリセット"></div>
             <label class="wide" id="gradient-angle-row">角度 ° <input id="gradient-angle" data-help-label="グラデーションの角度" type="number" min="-360" max="360" step="any" value="0" data-help="線形グラデーションの角度を指定します。"></label>
-            <input id="gradient-start" type="color" value="#3b82f6" hidden="">
-            <input id="gradient-end" type="color" value="#ffffff" hidden="">
+            <input id="gradient-start" type="color" value="#3b82f6" hidden>
+            <input id="gradient-end" type="color" value="#ffffff" hidden>
             <section id="gradient-ramp" class="wide" aria-label="グラデーションの色と位置">
               <div id="gradient-ramp-track" data-help="色の帯をクリックすると色を追加できます。色の丸をドラッグすると位置を変更します。">
                 <div id="gradient-ramp-colors"></div><div id="gradient-ramp-stops"></div>
@@ -3240,13 +3266,13 @@ body {
           </label>
           <label class="wide">線端
             <select data-appearance="stroke-linecap">
-              <option value="" disabled="">混在</option>
+              <option value="" disabled>混在</option>
               <option value="round">丸型</option><option value="butt">平型</option><option value="square">突出</option>
             </select>
           </label>
           <label class="wide">角の結合
             <select data-appearance="stroke-linejoin">
-              <option value="" disabled="">混在</option>
+              <option value="" disabled>混在</option>
               <option value="round">丸型</option><option value="miter">角型</option><option value="bevel">面取り</option>
             </select>
           </label>
@@ -3255,7 +3281,7 @@ body {
           </label>
           <label class="wide">破線プリセット
             <select data-appearance="stroke-dasharray">
-              <option value="" disabled="">混在・その他</option>
+              <option value="" disabled>混在・その他</option>
               <option value="none">実線</option><option value="8 4">破線</option><option value="1 4">点線</option>
             </select>
           </label>
@@ -3305,12 +3331,12 @@ body {
           </div>
         </div>
         <div class="panel-content object-actions">
-          <button type="button" data-min-selection="2" data-align="" onclick="alignSelection('x', 0)">左揃え</button>
-          <button type="button" data-min-selection="2" data-align="" onclick="alignSelection('x', 0.5)">左右中央</button>
-          <button type="button" data-min-selection="2" data-align="" onclick="alignSelection('x', 1)">右揃え</button>
-          <button type="button" data-min-selection="2" data-align="" onclick="alignSelection('y', 0)">上揃え</button>
-          <button type="button" data-min-selection="2" data-align="" onclick="alignSelection('y', 0.5)">上下中央</button>
-          <button type="button" data-min-selection="2" data-align="" onclick="alignSelection('y', 1)">下揃え</button>
+          <button type="button" data-min-selection="2" data-align onclick="alignSelection('x', 0)">左揃え</button>
+          <button type="button" data-min-selection="2" data-align onclick="alignSelection('x', 0.5)">左右中央</button>
+          <button type="button" data-min-selection="2" data-align onclick="alignSelection('x', 1)">右揃え</button>
+          <button type="button" data-min-selection="2" data-align onclick="alignSelection('y', 0)">上揃え</button>
+          <button type="button" data-min-selection="2" data-align onclick="alignSelection('y', 0.5)">上下中央</button>
+          <button type="button" data-min-selection="2" data-align onclick="alignSelection('y', 1)">下揃え</button>
         </div>
         <div id="match-key-size" class="panel-content object-actions hidden">
           <button type="button" onclick="matchAlignmentKeySize(true, false)">幅を揃える</button>
@@ -3340,7 +3366,7 @@ body {
           <label class="flex items-center gap-2"><input id="snap-drawing-grid" type="checkbox"> 図形の描画・移動を吸着</label>
           <label class="flex items-center gap-2">間隔
             <select id="drawing-grid-spacing" onchange="updateDrawingGrid()" aria-label="グリッド間隔">
-              <option value="5">5 px</option><option value="10">10 px</option><option value="20" selected="">20 px</option>
+              <option value="5">5 px</option><option value="10">10 px</option><option value="20" selected>20 px</option>
               <option value="25">25 px</option><option value="50">50 px</option><option value="100">100 px</option>
             </select>
           </label>
@@ -3350,9 +3376,9 @@ body {
         <summary>定規とガイド</summary>
         <div class="panel-content space-y-2">
           <label class="flex items-center gap-2"><input id="show-rulers" type="checkbox" onchange="updateRulers()"> 定規を表示</label>
-          <label class="flex items-center gap-2"><input id="show-guides" type="checkbox" checked="" onchange="updateGuides()"> ガイドを表示</label>
-          <label class="flex items-center gap-2"><input id="snap-guides" type="checkbox" checked=""> ガイドに吸着</label>
-          <label class="flex items-center gap-2"><input id="smart-guides" type="checkbox" checked=""> スマートガイド</label>
+          <label class="flex items-center gap-2"><input id="show-guides" type="checkbox" checked onchange="updateGuides()"> ガイドを表示</label>
+          <label class="flex items-center gap-2"><input id="snap-guides" type="checkbox" checked> ガイドに吸着</label>
+          <label class="flex items-center gap-2"><input id="smart-guides" type="checkbox" checked> スマートガイド</label>
           <label class="flex items-center gap-2"><input id="edit-guides" type="checkbox" onchange="updateGuideEditing()"> キャンバス上でガイドを移動</label>
           <label class="flex items-center gap-2"><input id="lock-guides" type="checkbox" onchange="updateGuides()"> ガイドをロック</label>
           <div class="object-actions">
@@ -3380,7 +3406,7 @@ body {
           </div>
         </div>
       </details>
-      <details id="underlay-trace-panel" class="panel-section" open=""><summary>画像トレース</summary><div class="panel-content"><div class="space-y-3"><h3 class="underlay-trace-heading">下絵</h3>
+      <details id="underlay-trace-panel" class="panel-section" open><summary>画像トレース</summary><div class="panel-content"><div class="space-y-3"><h3 class="underlay-trace-heading">下絵</h3>
           <label class="flex flex-col items-center justify-center w-full h-14 border-2 border-dashed border-slate-600 hover:border-indigo-500 rounded-sm cursor-pointer bg-slate-900/50 hover:bg-slate-900 transition group">
             <div class="flex flex-col items-center justify-center pt-2 pb-2">
               <i data-lucide="upload-cloud" class="w-4 h-4 text-slate-400 group-hover:text-indigo-400 mb-1 transition"></i>
@@ -3446,7 +3472,7 @@ body {
               <select id="trace-colors" class="w-full bg-slate-800 border border-slate-600 rounded-lg px-2.5 py-1.5 text-xs text-white">
                 <option value="4">4色（シンプル・アイコン向き）</option>
                 <option value="8">8色（標準イラスト）</option>
-                <option value="16" selected="">16色（ディテール重視）</option>
+                <option value="16" selected>16色（ディテール重視）</option>
                 <option value="24">24色（高彩度イラスト）</option>
                 <option value="32">32色（写真・グラデーション向き）</option>
                 <option value="48">48色（高精度カラー写真）</option>
@@ -3457,13 +3483,13 @@ body {
             <label id="trace-strength-row" class="hidden">カラーの強度 <output id="trace-strength-value">100%</output>
               <input type="range" id="trace-strength" data-help-label="カラーの強度" min="0" max="100" value="100" data-help="指定した色数のうち、どれだけ細かい色の違いを残すか調整します。弱くすると近い色がまとまります。">
             </label>
-            <label><input type="checkbox" id="bw-live-preview" checked="">キャンバスでプレビュー</label>
+            <label><input type="checkbox" id="bw-live-preview" checked>キャンバスでプレビュー</label>
             <details>
               <summary data-help="輪郭の精度、角の保持、背景を除外する許容幅、色面の隙間補正を設定します。">詳細設定</summary>
               <label>輪郭の精度 <input id="trace-detail" type="range" min="0" max="100" value="75" data-help="高いほど輪郭の細部を残します。低いほど曲線が滑らかになり、アンカーが減ります。"></label>
-              <label><input id="trace-corners" type="checkbox" checked="" data-help="直角付近を丸めずに保持します。ロゴやアイコンに向いています。">直角を保持</label>
+              <label><input id="trace-corners" type="checkbox" checked data-help="直角付近を丸めずに保持します。ロゴやアイコンに向いています。">直角を保持</label>
               <label>背景色の許容幅 <input id="trace-background-tolerance" type="range" min="0" max="90" value="24" data-help="外周からつながる背景を除くとき、どこまで近い色を同じ背景とみなすかを調整します。"></label>
-              <label><input id="trace-overlap" type="checkbox" checked="" data-help="色面に同色の細い縁を加えて、隣り合う色面の白い隙間を抑えます。">色面の隙間を補正</label>
+              <label><input id="trace-overlap" type="checkbox" checked data-help="色面に同色の細い縁を加えて、隣り合う色面の白い隙間を抑えます。">色面の隙間を補正</label>
             </details>
             <!-- ノイズ除去（最小パスサイズ） -->
             <div class="space-y-1">
@@ -3476,7 +3502,7 @@ body {
 
             <!-- 背景の自動除外チェック -->
             <label class="flex items-center gap-1.5 text-[11px] text-slate-300 cursor-pointer pt-0.5">
-              <input type="checkbox" id="trace-remove-bg" checked="" class="accent-emerald-500 rounded w-3.5 h-3.5">
+              <input type="checkbox" id="trace-remove-bg" checked class="accent-emerald-500 rounded w-3.5 h-3.5">
               <span>背景を除外</span>
             </label>
 
@@ -3542,7 +3568,7 @@ body {
         <span class="text-slate-400">出力範囲:</span>
         <select id="opt-trim-mode" onchange="onTrimModeSelect(this.value)" class="bg-transparent text-white font-medium focus:outline-none cursor-pointer">
           <option value="manual" class="bg-slate-800">手動トリミング枠 (Word風調整)</option>
-          <option value="auto" selected="" class="bg-slate-800">自動トリミング (描画にフィット)</option>
+          <option value="auto" selected class="bg-slate-800">自動トリミング (描画にフィット)</option>
           <option value="full" class="bg-slate-800">選択中の書き出しアートボード</option>
         </select>
         <button onclick="setTool('crop')" class="ml-1 px-1.5 py-0.5 rounded bg-indigo-600/40 hover:bg-indigo-600 text-indigo-200 hover:text-white text-[11px] transition">枠を調整</button>
@@ -3601,7 +3627,7 @@ body {
         <input id="raster-width" type="number" min="1" max="4096" step="1" value="800"> px
       </label>
       <label>JPEG品質
-        <select id="jpeg-quality"><option value="0.75">75%</option><option value="0.92" selected="">92%</option><option value="1">100%</option></select>
+        <select id="jpeg-quality"><option value="0.75">75%</option><option value="0.92" selected>92%</option><option value="1">100%</option></select>
       </label>
       <output id="export-size-info" aria-live="polite"></output>
       <button type="button" class="px-2 py-1 text-xs" onclick="downloadRasterImage('png')">PNG 保存</button>
@@ -3629,7 +3655,7 @@ body {
             <label>形式 <select id="preview-format" onchange="renderExportPreview()">
               <option value="svg">SVG</option><option value="png">PNG</option><option value="jpeg">JPEG</option>
             </select></label>
-            <button id="save-export-preview" type="button" onclick="saveExportPreview()" disabled="">この形式で保存</button>
+            <button id="save-export-preview" type="button" onclick="saveExportPreview()" disabled>この形式で保存</button>
           </div>
           <output id="preview-size" class="block" aria-live="polite"></output>
           <div class="h-56 bg-checkerboard rounded-sm border border-slate-600 flex items-center justify-center p-4 overflow-hidden">
@@ -3644,7 +3670,7 @@ body {
               <span class="text-xs font-semibold text-indigo-300">① インライン &lt;svg&gt; コード</span>
               <button onclick="copyForVIBridge('inline')" class="text-xs bg-indigo-600 hover:bg-indigo-500 px-2 py-0.5 rounded text-white">コピー</button>
             </div>
-            <textarea id="modal-code-inline" readonly="" class="w-full h-20 bg-slate-900 border border-slate-700 rounded-lg p-2 text-[11px] font-mono text-slate-300 focus:outline-none"></textarea>
+            <textarea id="modal-code-inline" readonly class="w-full h-20 bg-slate-900 border border-slate-700 rounded-lg p-2 text-[11px] font-mono text-slate-300 focus:outline-none"></textarea>
           </div>
 
           <div class="space-y-1">
@@ -3652,7 +3678,7 @@ body {
               <span class="text-xs font-semibold text-purple-300">② &lt;img src="..."&gt; 用 Data URI</span>
               <button onclick="copyForVIBridge('datauri')" class="text-xs bg-purple-600 hover:bg-purple-500 px-2 py-0.5 rounded text-white">コピー</button>
             </div>
-            <textarea id="modal-code-datauri" readonly="" class="w-full h-20 bg-slate-900 border border-slate-700 rounded-lg p-2 text-[11px] font-mono text-slate-300 focus:outline-none"></textarea>
+            <textarea id="modal-code-datauri" readonly class="w-full h-20 bg-slate-900 border border-slate-700 rounded-lg p-2 text-[11px] font-mono text-slate-300 focus:outline-none"></textarea>
           </div>
         </div>
       </div>
@@ -3668,12 +3694,12 @@ body {
     <form>
       <h2 id="document-dialog-title">新規</h2>
       <p id="document-warning" class="hidden">現在のドキュメントを置き換えます。必要な場合は先に保存してください。</p>
-      <label>名前 <input id="document-name" type="text" maxlength="80" required="" data-help="プロジェクトの名前です。保存時にJSONファイル名として使います。"></label>
+      <label>名前 <input id="document-name" type="text" maxlength="80" required data-help="プロジェクトの名前です。保存時にJSONファイル名として使います。"></label>
       <fieldset id="document-dimensions">
-        <label>幅（px） <input id="document-width" type="number" min="1" max="10000" value="800" required="" data-help="新しいアートボードの幅をピクセルで指定します。"></label>
-        <label>高さ（px） <input id="document-height" type="number" min="1" max="10000" value="600" required="" data-help="新しいアートボードの高さをピクセルで指定します。"></label>
+        <label>幅（px） <input id="document-width" type="number" min="1" max="10000" value="800" required data-help="新しいアートボードの幅をピクセルで指定します。"></label>
+        <label>高さ（px） <input id="document-height" type="number" min="1" max="10000" value="600" required data-help="新しいアートボードの高さをピクセルで指定します。"></label>
       </fieldset>
-      <div class="object-actions"><button type="submit" value="cancel" formnovalidate="">キャンセル</button><button id="document-submit" type="submit" value="ok">作成</button></div>
+      <div class="object-actions"><button type="submit" value="cancel" formnovalidate>キャンセル</button><button id="document-submit" type="submit" value="ok">作成</button></div>
     </form>
   </dialog>
   <section id="studio-effect-panel" class="panel-section" aria-labelledby="studio-effect-title">
@@ -7044,10 +7070,11 @@ body {
       refreshArtworkClips();
       refreshArtworkErasures();
       const group = document.getElementById('selection-transform-group');
-      if(currentTool==='reflect')group.setAttribute('pointer-events','none');
+      const drawingShape=shapeTools.has(currentTool)||currentTool==='shaper';
+      if(currentTool==='reflect'||drawingShape)group.setAttribute('pointer-events','none');
       else group.removeAttribute('pointer-events');
       renderTransformTools();
-      if (!['select','reflect'].includes(currentTool) || selectedElements.length === 0) {
+      if (!(currentTool==='select'||currentTool==='reflect'||drawingShape) || selectedElements.length === 0) {
         group.classList.add('hidden');
         return;
       }
@@ -8189,8 +8216,11 @@ body {
         if((!shape||shape.tag==='line')&&shaperScribble(g.points,g.unit))return;
         if(shape){
           const path=commitShape(shape);
-          if(path&&shape.tag!=='line'&&!isFillEnabled)path.setAttribute('fill','#ebebeb');
-          saveHistory('Shaperで図形を描画');
+          if(path){
+            if(shape.tag!=='line'&&!isFillEnabled)path.setAttribute('fill','#ebebeb');
+            setSelection([path]);
+            saveHistory('Shaperで図形を描画');
+          }
         }
         else if(g.points.length>3)showToast('輪郭を一筆で描くか、図形の内側をジグザグになぞってください');
       }catch(error){showToast(error.message);}
@@ -8726,7 +8756,7 @@ body {
       if(active){
         const puppet=currentTool==='puppet';
         const hint=puppet?'ピンを2つ以上置き、残したい箇所を固定してドラッグ':
-          currentTool==='reflect'?'軸を2点で指定、または軸に沿ってドラッグ':
+          currentTool==='reflect'?'反転の折り目を2点で指定、またはドラッグで指定':
           currentTool==='rotate'?'タップで基準点、ドラッグで回転':'タップで基準点、ドラッグで傾ける';
         document.getElementById('interactive-transform-hint').textContent=hint;
         document.getElementById('transform-reset-pivot').hidden=puppet;
@@ -8788,28 +8818,32 @@ body {
       puppetTarget.removeAttribute('data-studio-warp');
       setTool('select');saveHistory('パペットワープを展開');
     }
+    function showTransformAngle(radians){
+      const degrees=Math.round(radians*1800/Math.PI)/10;
+      const readout=document.getElementById('rotation-readout');
+      readout.value=(degrees>0?'+':'')+degrees+'°';
+      readout.classList.remove('hidden');
+    }
     function affineDragMap(drag,point,event){
       const {pivot,start,tool}=drag;
       const angleAt=p=>Math.atan2(p.y-pivot.y,p.x-pivot.x);
       const snap=modifierActive(event,'Shift');
+      const signedAngle=angle=>Math.atan2(Math.sin(angle),Math.cos(angle));
       if(tool==='reflect'){
-        // Reflection changes the direction of the center ray by twice the axis angle relative to that ray.
-        const center={x:drag.box.x+drag.box.w/2,y:drag.box.y+drag.box.h/2};
-        const original=Math.hypot(center.x-pivot.x,center.y-pivot.y)>1e-8?angleAt(center):0;
-        const fullTurn=2*Math.PI;
-        let delta=((2*(angleAt(point)-original)+Math.PI)%fullTurn+fullTurn)%fullTurn-Math.PI;
-        if(snap)delta=Math.round(delta/(Math.PI/2))*Math.PI/2;
-        const axis=original+delta/2;
-        const c=Math.cos(2*axis),s=Math.sin(2*axis);
-        const readout=document.getElementById('rotation-readout');
-        const degrees=Math.round(delta*1800/Math.PI)/10;
-        readout.value=(degrees>0?'+':'')+degrees+'°';
-        readout.classList.remove('hidden');
+        let axis=angleAt(point);
+        const tolerance=3*workspaceUnit();
+        if(snap)axis=Math.round(axis/(Math.PI/4))*Math.PI/4;
+        else if(Math.abs(point.y-pivot.y)<=tolerance)axis=0;
+        else if(Math.abs(point.x-pivot.x)<=tolerance)axis=Math.PI/2;
+        // The reflection axis is measured in canvas coordinates. Its doubled
+        // angle is the change in direction of an initially horizontal edge.
+        const angle=signedAngle(2*axis),c=Math.cos(angle),s=Math.sin(angle);
         return (x,y)=>[c*x+s*y,s*x-c*y];
       }
       if(tool==='rotate'){
-        let angle=angleAt(point)-angleAt(start);
+        let angle=signedAngle(angleAt(point)-angleAt(start));
         if(snap||document.getElementById('rotation-snap').checked)angle=Math.round(angle/(Math.PI/12))*Math.PI/12;
+        showTransformAngle(angle);
         const c=Math.cos(angle),s=Math.sin(angle);
         return (x,y)=>[c*x-s*y,s*x+c*y];
       }
@@ -8835,7 +8869,7 @@ body {
       const drag=transformDrag;
       if(!drag)return;
       transformDrag=null;isPointerDown=false;
-      if(drag.tool==='reflect')document.getElementById('rotation-readout').classList.add('hidden');
+      if(drag.tool==='rotate')document.getElementById('rotation-readout').classList.add('hidden');
       if(svgEl.hasPointerCapture(drag.pointer))svgEl.releasePointerCapture(drag.pointer);
       if(!commit||drag.tool!=='puppet')restoreTransformDrag(drag);
       if(commit&&drag.changed){
@@ -8860,8 +8894,14 @@ body {
         drag.liveModel=model;drag.changed=true;
       }else{
         const {x,y}=drag.pivot;
-        if(drag.tool!=='shear'&&Math.hypot(point.x-x,point.y-y)<threshold)return;
         drag.lastPoint=point;
+        if(drag.tool==='reflect'&&Math.hypot(point.x-drag.start.x,point.y-drag.start.y)<=threshold||
+            drag.tool!=='shear'&&Math.hypot(point.x-x,point.y-y)<threshold){
+          restoreTransformDrag(drag);
+          drag.changed=false;
+          if(drag.tool==='rotate')showTransformAngle(0);
+          return;
+        }
         drag.map=affineDragMap(drag,point,event);
         const [a,b]=drag.map(1,0),[c,d]=drag.map(0,1);
         for(const {node,original} of drag.preview){
@@ -8956,7 +8996,7 @@ body {
     },true);
 
     for(const type of ['keydown','keyup'])window.addEventListener(type,event=>{
-      if(event.key==='Shift'&&transformDrag?.tool==='reflect'&&transformDrag.lastPoint)
+      if(event.key==='Shift'&&['reflect','rotate'].includes(transformDrag?.tool)&&transformDrag.lastPoint)
         previewTransformDrag(event,transformDrag.lastPoint);
     });
 
@@ -14711,7 +14751,11 @@ inlinePathPreview=preview;document.getElementById('ui-overlay-group').append(pre
       if (shapeTools.has(currentTool)) {
         const geometry = updateShapePreview(e, getSVGPoint(e));
         for (const preview of [previewPolygon, previewRect, previewCircle, previewLine]) preview.classList.add('hidden');
-        if (commitShape(geometry)) saveHistory(toolLabels[currentTool]+'を描画');
+        const shape=commitShape(geometry);
+        if(shape){
+          setSelection([shape]);
+          saveHistory(toolLabels[currentTool]+'を描画');
+        }
         return;
       }
 
@@ -19664,5 +19708,5 @@ context-help-off|ヘルプを終了し、通常の編集操作へ戻ります。
     updatePathCount();
     updateClipboardButtons();
   </script>
-<dialog id="color-proof-dialog"><div><span id="color-proof-label"></span><button type="button" onclick="document.getElementById('color-proof-dialog').close()">閉じる</button></div><img id="color-proof-image" alt="ICCソフトプルーフ"><p>現在のアートボードの静止プレビューです。編集後は再表示してください。</p></dialog><dialog id="device-check-dialog" style="background:#333;color:#eee;border:1px solid #777;padding:12px;max-width:min(720px,96vw);max-height:90dvh;overflow:auto"><h2>端末の動作確認</h2><p>実際に操作して結果を選択してください。未確認の項目を自動で合格にはしません。</p><div id="device-check-list"></div><button type="button" onclick="exportDeviceChecks()">結果をJSONで保存</button><button type="button" onclick="document.getElementById('device-check-dialog').close()">閉じる</button></dialog>
-</body></html>
+<dialog id="color-proof-dialog"><div><span id="color-proof-label"></span><button type="button" onclick="document.getElementById('color-proof-dialog').close()">閉じる</button></div><img id="color-proof-image" alt="ICCソフトプルーフ"><p>現在のアートボードの静止プレビューです。編集後は再表示してください。</p></dialog><dialog id="device-check-dialog" style="background:#333;color:#eee;border:1px solid #777;padding:12px;max-width:min(720px,96vw);max-height:90dvh;overflow:auto"><h2>端末の動作確認</h2><p>実際に操作して結果を選択してください。未確認の項目を自動で合格にはしません。</p><div id="device-check-list"></div><button type="button" onclick="exportDeviceChecks()">結果をJSONで保存</button><button type="button" onclick="document.getElementById('device-check-dialog').close()">閉じる</button></dialog></body>
+</html>
