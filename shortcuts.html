@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Illust...later ショートカット一覧</title>
+<style>
+  body{font:15px/1.65 system-ui,sans-serif;color:#172a3d;background:#f4f7fa;margin:0}
+  main{max-width:760px;margin:auto;padding:18px}h1{font-size:1.5rem}h2{font-size:1.15rem;margin:1.5em 0 .45em}
+  nav{display:flex;gap:.8em;flex-wrap:wrap}a{color:#205d98}
+  table{width:100%;border-collapse:collapse;background:white}th,td{padding:.4em .6em;border:1px solid #cbd7e2;text-align:left;vertical-align:top}
+  th{background:#e4edf7}kbd{font:inherit;font-weight:600}
+</style>
+</head>
+<body><main>
+<h1>Illust...later ショートカット一覧</h1>
+<nav aria-label="目次"><a href="#tools">ツール</a><a href="#commands">ファイルと編集</a><a href="#gestures">クリックとドラッグ</a><a href="#touch">タッチキー</a></nav>
+<h2 id="tools">ツールと表示</h2>
+<table><thead><tr><th scope="col">キー</th><th scope="col">操作</th></tr></thead><tbody>
+<tr><td><kbd>V</kbd> / <kbd>A</kbd></td><td>選択 / ダイレクト選択</td></tr>
+<tr><td><kbd>P</kbd> / <kbd>B</kbd></td><td>ベジェ曲線ペン / ブラシ</td></tr>
+<tr><td><kbd>M</kbd> / <kbd>L</kbd></td><td>長方形ツール / 楕円</td></tr>
+<tr><td><kbd>T</kbd> / <kbd>W</kbd></td><td>文字 / ブレンド</td></tr>
+<tr><td><kbd>R</kbd> / <kbd>O</kbd></td><td>回転 / リフレクト（ドラッグ中にShiftで移動角を90°刻みに）</td></tr>
+<tr><td><kbd>H</kbd> / <kbd>Z</kbd></td><td>手のひら / ズーム</td></tr>
+<tr><td><kbd>Space</kbd>＋ドラッグ</td><td>一時的に手のひらで画面を移動</td></tr>
+<tr><td><kbd>G</kbd></td><td>グラデーションを編集</td></tr>
+<tr><td><kbd>Shift</kbd>＋<kbd>N</kbd></td><td>Shaper</td></tr>
+<tr><td><kbd>Shift</kbd>＋<kbd>P</kbd></td><td>遠近グリッドの表示切り替え</td></tr>
+<tr><td><kbd>Q</kbd></td><td>？ヘルプのオン・オフ</td></tr>
+<tr><td><kbd>X</kbd> / <kbd>Shift</kbd>＋<kbd>X</kbd></td><td>塗りと線の操作対象を切り替え / 塗りと線を入れ替え</td></tr>
+<tr><td><kbd>D</kbd></td><td>白い塗り・黒い線に戻す</td></tr>
+<tr><td><kbd>[</kbd> / <kbd>]</kbd></td><td>ブラシ・ペン系の線幅や部分消しゴムの直径を1 px小さく / 大きくする</td></tr>
+</tbody></table>
+<h2 id="commands">ファイルと編集</h2>
+<p>⌘はCommandです。⌘とCtrlのどちらでも使える組み合わせは、表で「⌘/Ctrl」と表記します。</p>
+<table><thead><tr><th scope="col">キー</th><th scope="col">操作</th></tr></thead><tbody>
+<tr><td><kbd>⌘/Ctrl</kbd>＋<kbd>N</kbd></td><td>新規ドキュメント</td></tr>
+<tr><td><kbd>⌘/Ctrl</kbd>＋<kbd>S</kbd> / <kbd>Shift</kbd>＋<kbd>⌘/Ctrl</kbd>＋<kbd>S</kbd></td><td>保存 / 別名で保存</td></tr>
+<tr><td><kbd>⌘/Ctrl</kbd>＋<kbd>Z</kbd></td><td>取り消し</td></tr>
+<tr><td><kbd>Shift</kbd>＋<kbd>⌘/Ctrl</kbd>＋<kbd>Z</kbd> または <kbd>⌘/Ctrl</kbd>＋<kbd>Y</kbd></td><td>やり直し</td></tr>
+<tr><td><kbd>⌘/Ctrl</kbd>＋<kbd>C</kbd> / <kbd>X</kbd> / <kbd>V</kbd></td><td>コピー / 切り取り / 貼り付け</td></tr>
+<tr><td><kbd>⌘/Ctrl</kbd>＋<kbd>Enter</kbd></td><td>入力中の文字を確定</td></tr>
+<tr><td><kbd>矢印</kbd> / <kbd>Shift</kbd>＋<kbd>矢印</kbd></td><td>選択図形を1 px / 10 px移動</td></tr>
+<tr><td><kbd>Delete</kbd> または <kbd>Backspace</kbd></td><td>選択図形または選択中のアンカーを削除</td></tr>
+<tr><td><kbd>Enter</kbd></td><td>ベジェ曲線ペンのパスを確定、またはダイレクト選択でアンカー編集を終了</td></tr>
+<tr><td><kbd>Esc</kbd></td><td>編集中の操作や文字入力を取り消す、ヘルプを終了する、選択を解除するなど、状況に応じて動作</td></tr>
+</tbody></table>
+<p>メニュー内は矢印キーで移動し、Home・Endで先頭・末尾へ移動できます。グラデーションの色の丸を選んで左右矢印を押すと、色の位置が1ポイントずつ動きます。</p>
+<h2 id="gestures">クリックとドラッグ</h2>
+<table><thead><tr><th scope="col">組み合わせ</th><th scope="col">操作</th></tr></thead><tbody>
+<tr><td><kbd>Shift</kbd>＋クリック</td><td>図形の追加選択・解除。アンカー編集中は線上に頂点を追加</td></tr>
+<tr><td><kbd>Shift</kbd>＋ドラッグ</td><td>正円・正方形を描く、直線の角度を揃える、縦横比を保って拡大縮小</td></tr>
+<tr><td><kbd>Option</kbd>＋ドラッグ</td><td>選択図形を複製して移動。図形ツールでは中心から描画</td></tr>
+<tr><td><kbd>Shift</kbd>＋<kbd>Option</kbd>＋ドラッグ</td><td>中心から正円・正方形を描く、中心と縦横比を保って拡大縮小</td></tr>
+<tr><td><kbd>Option</kbd>＋アンカーをドラッグ</td><td>方向線を引き出す</td></tr>
+<tr><td><kbd>Option</kbd>＋ズームツールでクリック</td><td>縮小</td></tr>
+</tbody></table>
+<h2 id="touch">タッチキー</h2>
+<p>「表示 → タッチキー設定…」で、左ツールバー下に好きなキーや操作を置けます。「段を追加」で置ける位置が増えます。画面に収まらないキーは、ツールバー下の「…」をタップして表示します。ShiftやOptionを押しながら別の指で描くか、「次の1操作」を選んでキーをタップしてから描きます。EscやQ、保存やコピーなどのボタンはタップして実行します。</p>
+</main></body></html>
