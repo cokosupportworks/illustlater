@@ -14,23 +14,24 @@
 </head>
 <body><main>
 <h1>Illust...later ショートカット一覧</h1>
-<nav aria-label="目次"><a href="#tools">ツール</a><a href="#commands">ファイルと編集</a><a href="#gestures">クリックとドラッグ</a><a href="#touch">タッチキー</a></nav>
+<nav aria-label="目次"><a href="#tools">ツール</a><a href="#commands">ファイルと編集</a><a href="#gestures">クリックとドラッグ</a><a href="#editing">編集中の操作</a><a href="#touch">タッチキー</a></nav>
+<p>文字や数値を入力している間は、入力欄の操作が優先されます。ツールを切り替えるときは、入力を終えてキャンバスを操作できる状態にしてください。</p>
 <h2 id="tools">ツールと表示</h2>
 <table><thead><tr><th scope="col">キー</th><th scope="col">操作</th></tr></thead><tbody>
 <tr><td><kbd>V</kbd> / <kbd>A</kbd></td><td>選択 / ダイレクト選択</td></tr>
-<tr><td><kbd>P</kbd> / <kbd>B</kbd></td><td>ベジェ曲線ペン / ブラシ</td></tr>
+<tr><td><kbd>P</kbd> / <kbd>B</kbd></td><td>ペンツール / ブラシツール</td></tr>
 <tr><td><kbd>M</kbd> / <kbd>L</kbd></td><td>長方形ツール / 楕円</td></tr>
 <tr><td><kbd>T</kbd> / <kbd>W</kbd></td><td>文字 / ブレンド</td></tr>
-<tr><td><kbd>R</kbd> / <kbd>O</kbd></td><td>回転 / リフレクト（ドラッグ中にShiftで向きの変化を90°刻みに）</td></tr>
+<tr><td><kbd>R</kbd> / <kbd>O</kbd></td><td>回転ツール / リフレクトツール</td></tr>
 <tr><td><kbd>H</kbd> / <kbd>Z</kbd></td><td>手のひら / ズーム</td></tr>
 <tr><td><kbd>Space</kbd>＋ドラッグ</td><td>一時的に手のひらで画面を移動</td></tr>
-<tr><td><kbd>G</kbd></td><td>グラデーションを編集</td></tr>
-<tr><td><kbd>Shift</kbd>＋<kbd>N</kbd></td><td>Shaper</td></tr>
+<tr><td><kbd>G</kbd></td><td>グラデーションの設定とキャンバス上の編集ハンドルを表示</td></tr>
+<tr><td><kbd>Shift</kbd>＋<kbd>N</kbd></td><td>Shaperツール</td></tr>
 <tr><td><kbd>Shift</kbd>＋<kbd>P</kbd></td><td>遠近グリッドの表示切り替え</td></tr>
 <tr><td><kbd>Q</kbd></td><td>？ヘルプのオン・オフ</td></tr>
 <tr><td><kbd>X</kbd> / <kbd>Shift</kbd>＋<kbd>X</kbd></td><td>塗りと線の操作対象を切り替え / 塗りと線を入れ替え</td></tr>
 <tr><td><kbd>D</kbd></td><td>白い塗り・黒い線に戻す</td></tr>
-<tr><td><kbd>[</kbd> / <kbd>]</kbd></td><td>ブラシ・ペン系の線幅や部分消しゴムの直径を1 px小さく / 大きくする</td></tr>
+<tr><td><kbd>[</kbd> / <kbd>]</kbd></td><td>ブラシ、鉛筆、ペンツール、塗りペンの太さ、または部分消しゴムの直径を1 px小さく / 大きくする（描画中を除く）</td></tr>
 </tbody></table>
 <h2 id="commands">ファイルと編集</h2>
 <p>⌘はCommandです。⌘とCtrlのどちらでも使える組み合わせは、表で「⌘/Ctrl」と表記します。</p>
@@ -42,20 +43,50 @@
 <tr><td><kbd>⌘/Ctrl</kbd>＋<kbd>C</kbd> / <kbd>X</kbd> / <kbd>V</kbd></td><td>コピー / 切り取り / 貼り付け</td></tr>
 <tr><td><kbd>⌘/Ctrl</kbd>＋<kbd>Enter</kbd></td><td>入力中の文字を確定</td></tr>
 <tr><td><kbd>矢印</kbd> / <kbd>Shift</kbd>＋<kbd>矢印</kbd></td><td>選択図形を1 px / 10 px移動</td></tr>
-<tr><td><kbd>Delete</kbd> または <kbd>Backspace</kbd></td><td>選択図形または選択中のアンカーを削除</td></tr>
-<tr><td><kbd>Enter</kbd></td><td>ベジェ曲線ペンのパスを確定、またはダイレクト選択でアンカー編集を終了</td></tr>
+<tr><td><kbd>Delete</kbd> または <kbd>Backspace</kbd></td><td>選択ツールで選択図形を削除。ペンツール・ダイレクト選択では選択アンカー、パペットワープでは選択ピンを削除</td></tr>
+<tr><td><kbd>Enter</kbd></td><td>ペンツールの描画中のパスを確定、またはダイレクト選択でアンカー編集を終了</td></tr>
 <tr><td><kbd>Esc</kbd></td><td>編集中の操作や文字入力を取り消す、ヘルプを終了する、選択を解除するなど、状況に応じて動作</td></tr>
 </tbody></table>
-<p>メニュー内は矢印キーで移動し、Home・Endで先頭・末尾へ移動できます。グラデーションの色の丸を選んで左右矢印を押すと、色の位置が1ポイントずつ動きます。</p>
 <h2 id="gestures">クリックとドラッグ</h2>
 <table><thead><tr><th scope="col">組み合わせ</th><th scope="col">操作</th></tr></thead><tbody>
-<tr><td><kbd>Shift</kbd>＋クリック</td><td>図形の追加選択・解除。アンカー編集中は線上に頂点を追加</td></tr>
-<tr><td><kbd>Shift</kbd>＋ドラッグ</td><td>正円・正方形を描く、直線の角度を揃える、縦横比を保って拡大縮小</td></tr>
+<tr><td><kbd>Shift</kbd>＋クリック</td><td>図形の追加選択・解除。ダイレクト選択でアンカー編集中は、パスの線上に頂点を追加</td></tr>
+<tr><td><kbd>Shift</kbd>＋ドラッグ</td><td>楕円・長方形ツールで正円・正方形を描く。直線ツールは45°刻み。選択枠の拡大縮小は縦横比を固定</td></tr>
 <tr><td><kbd>Option</kbd>＋ドラッグ</td><td>選択図形を複製して移動。図形ツールでは中心から描画</td></tr>
 <tr><td><kbd>Shift</kbd>＋<kbd>Option</kbd>＋ドラッグ</td><td>中心から正円・正方形を描く、中心と縦横比を保って拡大縮小</td></tr>
-<tr><td><kbd>Option</kbd>＋アンカーをドラッグ</td><td>方向線を引き出す</td></tr>
+<tr><td><kbd>Option</kbd>＋アンカーをドラッグ</td><td>アンカーから方向線（ハンドル）を引き出す</td></tr>
+<tr><td><kbd>Option</kbd>＋方向線のハンドルをドラッグ</td><td>反対側のハンドルと角度を連動させず、片側だけを調整</td></tr>
+<tr><td><kbd>Shift</kbd>＋スターツールでドラッグ</td><td>星の先端の方向を45°刻みに固定。通常のドラッグでも縦横を均等に保ち、距離で大きさ、方向で回転を調整</td></tr>
+<tr><td><kbd>Shift</kbd>＋回転ツールでドラッグ</td><td>回転角度を15°刻みに固定。選択枠の回転ハンドルも15°刻み</td></tr>
+<tr><td><kbd>Shift</kbd>＋リフレクトツールでドラッグ</td><td>反転軸の角度を45°刻みに固定。反転後の図形の向きは90°刻みで変化</td></tr>
+<tr><td><kbd>Shift</kbd>＋シアーツールでドラッグ</td><td>傾ける角度を15°刻みに固定</td></tr>
+<tr><td><kbd>Option</kbd>＋シェイプ形成でクリック・ドラッグ</td><td>なぞった領域を結合する代わりに削除。塗りのない線も線幅を含む領域として使用可能</td></tr>
+<tr><td><kbd>Option</kbd>＋線幅ツールで幅点をドラッグ</td><td>パスの片側だけの線幅を調整</td></tr>
 <tr><td><kbd>Option</kbd>＋ズームツールでクリック</td><td>縮小</td></tr>
+<tr><td><kbd>⌘/Ctrl</kbd>＋ホイール</td><td>ポインターの位置を中心に拡大・縮小。修飾キーなしのホイールは表示位置を移動</td></tr>
+</tbody></table>
+<h2 id="editing">編集中の操作</h2>
+<table><thead><tr><th scope="col">場所とキー</th><th scope="col">操作</th></tr></thead><tbody>
+<tr><td>文字入力中の <kbd>⌘/Ctrl</kbd>＋<kbd>Enter</kbd> / <kbd>Esc</kbd></td><td>文字入力を確定 / 今回の文字入力・変更を取り消す。日本語の変換中は先に変換を確定</td></tr>
+<tr><td>グラデーションの色の丸を選択して <kbd>←</kbd> / <kbd>→</kbd></td><td>色の位置を1ポイントずつ移動</td></tr>
+<tr><td>グラデーションのキャンバス編集中に <kbd>Esc</kbd></td><td>キャンバス上のグラデーション編集を終了</td></tr>
+<tr><td>数値スライダーを開いて <kbd>Esc</kbd></td><td>スライダーでの変更を取り消して閉じる</td></tr>
+<tr><td>ブラシ描画、アンカー移動、線幅・ワープ・メッシュ編集、シェイプ形成の操作中に <kbd>Esc</kbd></td><td>進行中の操作を取り消す</td></tr>
+<tr><td>回転・リフレクト・シアー・パペットワープで <kbd>Esc</kbd></td><td>変形中は取り消す。操作していないときは選択ツールへ戻る</td></tr>
+<tr><td>遠近グリッドのキューブの面にフォーカスして <kbd>Enter</kbd> / <kbd>Space</kbd></td><td>その面を描画面として選択</td></tr>
+<tr><td>最上部のメニューで <kbd>←</kbd> / <kbd>→</kbd> / <kbd>↓</kbd></td><td>隣のメニューへ移動 / メニューを開く</td></tr>
+<tr><td>開いたメニューで <kbd>↑</kbd> / <kbd>↓</kbd> / <kbd>Home</kbd> / <kbd>End</kbd></td><td>項目を移動 / 先頭・末尾へ移動。EnterまたはSpaceで項目を実行</td></tr>
+<tr><td>サブメニューのある項目で <kbd>→</kbd>、サブメニュー内で <kbd>←</kbd> / <kbd>Esc</kbd></td><td>サブメニューを開く / 親メニューへ戻る。最上位でEscを押すと閉じる</td></tr>
+<tr><td>？ヘルプ中の <kbd>Q</kbd> / <kbd>Esc</kbd></td><td>？ヘルプを終了。Tabで項目へ移動し、EnterまたはSpaceで説明を表示</td></tr>
 </tbody></table>
 <h2 id="touch">タッチキー</h2>
-<p>「表示 → タッチキー設定…」で、左ツールバー下に好きなキーや操作を置けます。「段を追加」で置ける位置が増えます。画面に収まらないキーは、ツールバー下の「…」をタップして表示します。ShiftやOptionを押しながら別の指で描くか、「次の1操作」を選んでキーをタップしてから描きます。EscやQ、保存やコピーなどのボタンはタップして実行します。</p>
+<p>「表示 → タッチキー設定…」で、左ツールバー下にキーや操作を割り当てられます。表示形式は1列の横長ボタン、または2列のボタンから選べます。「段を追加」で配置できる位置を増やせます。画面に収まらないキーは、タッチキー欄の「…」から表示します。表示形式で非表示も選べます。</p>
+<table><thead><tr><th scope="col">設定</th><th scope="col">使い方</th></tr></thead><tbody>
+<tr><td>押している間</td><td>ShiftやOptionを片方の指で押さえ、別の指でキャンバスを操作します。指を離すと修飾キーが解除されます。</td></tr>
+<tr><td>次の1操作</td><td>修飾キーを一度タップして指を離し、キャンバスでクリックやドラッグを行います。その操作が終わると自動解除されます。実行前に同じキーをもう一度タップすると解除できます。別のタッチキー操作を実行した場合も解除されます。</td></tr>
+<tr><td>割り当てられる修飾キー</td><td>Shift、Option、Control、Command。修飾キーを組み合わせ、キーボードがない場合のキー操作に使えます。WindowsなどのAltはOptionに対応します。</td></tr>
+<tr><td>割り当てられるキー</td><td>Esc、Q、[、]、Enter、Delete、矢印キー、およびV・A・P・B・M・L・T・W・H・Z・G・X・D・N・R・O・S・C・Y。N・S・C・Yなどは、この一覧にある修飾キーとの組み合わせで使います。</td></tr>
+<tr><td>1回のタップで実行する操作</td><td>取り消し、やり直し、コピー、貼り付け、切り取り、保存、Shaper、遠近グリッド。これらを選ぶと、必要なキーの組み合わせをまとめて実行できます。</td></tr>
+</tbody></table>
+<p>正円の例。「次の1操作」に設定し、楕円ツールを選択してShiftをタップします。指を離してからキャンバスをドラッグし、描き終えるとShiftが解除されます。</p>
+<p>倍率は「表示」メニューまたは画面下の倍率欄で100%・200%・500%・1000%を選べます。拡大の上限は1000%です。</p>
 </main></body></html>
